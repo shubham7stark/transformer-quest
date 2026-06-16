@@ -85,6 +85,12 @@
         }
         return best;
       }
+      // argmax index of an array (first max wins) — used for each head's peak key.
+      function argmaxIdx(arr) {
+        var bi = 0;
+        for (var ai = 1; ai < arr.length; ai++) if (arr[ai] > arr[bi]) bi = ai;
+        return bi;
+      }
 
       /* ----------------------------------------------------- intro narrative */
       root.appendChild(TQ.block(
@@ -130,12 +136,16 @@
       var selQuery = 1; // default 'cat'
       var highlightSharp = false;
 
+      // Per-head enable flags for the side-by-side comparison block (all ON).
+      var enabledHeads = [];
+      for (var eh = 0; eh < H; eh++) enabledHeads.push(true);
+
       // Forward decls so cross-updates work.
       var concatPanel = TQ.el("div", { class: "tq-panel tq-grow tq-mh-concat" });
       var querySel = TQ.segmented({
         options: tokens.map(function (tk, i) { return { label: tk, value: i }; }),
         value: selQuery,
-        onChange: function (v) { selQuery = v; renderConcat(); refreshActiveHeatmap(); }
+        onChange: function (v) { selQuery = v; renderConcat(); refreshActiveHeatmap(); renderCompare(); }
       });
       var sharpToggle = TQ.toggle({
         label: "Highlight sharpest head",
@@ -183,6 +193,7 @@
         querySel.set(q);
         refreshActiveHeatmap();
         renderConcat();
+        renderCompare();
       }
 
       function refreshActiveHeatmap() {
@@ -255,6 +266,139 @@
         "heads are redundant. Say \"they can specialize,\" not \"head 7 IS the syntax head.\""
       ));
       root.appendChild(headsBlock);
+
+      /* ============================================================= *
+       *  PRIMARY interactive — SAME query, four lenses, + union coverage.
+       *  The comparison the tabs make impossible: all four heads' attention
+       *  ROWS for ONE query, stacked on the same six key columns, plus a
+       *  computed UNION row (elementwise max across the ENABLED heads).
+       *  Drives off the existing module-scope selQuery (no second selector).
+       * ============================================================= */
+      var comparePanel = TQ.el("div", { class: "tq-panel tq-grow tq-mh-cmp" });
+
+      // one head-row strip: heads[h].att.weights[q] as a 1×6 heatmap, [0,1] scale
+      function headRowStrip(h, q, dim) {
+        var strip = TQ.heatmap([heads[h].att.weights[q]], {
+          colLabels: tokens,
+          rowLabels: ["head " + (h + 1)],
+          cellSize: 44, min: 0, max: 1,
+          selectedCol: argmaxIdx(heads[h].att.weights[q]),
+          format: function (v) { return TQ.fmt(v, 2); }
+        });
+        return TQ.el("div", { class: "tq-mh-cmp-row" + (dim ? " is-off" : "") }, strip);
+      }
+
+      function renderCompare() {
+        comparePanel.innerHTML = "";
+        var q = selQuery;
+
+        // header — which query we're comparing across heads
+        comparePanel.appendChild(TQ.el("div", { class: "tq-mh-concat-head" },
+          TQ.el("span", { class: "tq-stat-cap", text: "same query, four lenses" }),
+          TQ.el("span", { class: "tq-mh-qtoken", text: "\"" + tokens[q] + "\" (#" + q + ")" })
+        ));
+
+        // shared column-header alignment is handled by each heatmap's colLabels.
+        var grid = TQ.el("div", { class: "tq-mh-cmp-grid" });
+
+        // four head rows (dim + excluded from union when toggled off)
+        for (var hi = 0; hi < H; hi++) {
+          grid.appendChild(headRowStrip(hi, q, !enabledHeads[hi]));
+        }
+
+        // UNION row = elementwise max across the ENABLED heads (genuinely live).
+        var enabledIdx = [];
+        for (var ei = 0; ei < H; ei++) if (enabledHeads[ei]) enabledIdx.push(ei);
+        var union = [];
+        for (var k = 0; k < n; k++) {
+          if (enabledIdx.length === 0) { union.push(0); continue; }
+          union.push(TQ.maxOf(enabledIdx.map(function (h) { return heads[h].att.weights[q][k]; })));
+        }
+        var unionStrip = TQ.heatmap([union], {
+          colLabels: tokens,
+          rowLabels: ["union (max)"],
+          cellSize: 44, min: 0, max: 1,
+          format: function (v) { return TQ.fmt(v, 2); }
+        });
+        grid.appendChild(TQ.el("div", { class: "tq-mh-cmp-row tq-mh-cmp-union" }, unionStrip));
+        comparePanel.appendChild(grid);
+
+        // readout: per-head argmax chips (enabled only) + distinct-keys-covered badge
+        var distinct = {};
+        var readout = TQ.el("div", { class: "tq-mh-cmp-readout" });
+        readout.appendChild(TQ.el("span", { class: "tq-stat-cap", text: "peaks" }));
+        for (var ci = 0; ci < H; ci++) {
+          var am = argmaxIdx(heads[ci].att.weights[q]);
+          var on = enabledHeads[ci];
+          if (on) distinct[am] = true;
+          readout.appendChild(TQ.badge(
+            "head" + (ci + 1) + "→" + tokens[am] + (on ? "" : " (off)"),
+            on ? "info" : "default"
+          ));
+        }
+        var nDistinct = Object.keys(distinct).length;
+        readout.appendChild(TQ.badge(
+          nDistinct + " distinct key" + (nDistinct === 1 ? "" : "s") + " covered",
+          nDistinct >= 3 ? "good" : "warn"
+        ));
+        comparePanel.appendChild(readout);
+
+        // honest "they differ in WHERE, not in sharpness" annotation via entropy
+        var ents = [];
+        for (var pe = 0; pe < H; pe++) ents.push(entropy(heads[pe].att.weights[q]));
+        comparePanel.appendChild(TQ.note(
+          "Each strip is one head's softmax row for \"" + tokens[q] + "\" over the six keys (same [0,1] color " +
+          "scale as the tabs). Each head's argmax key (its column label) is highlighted. The heads differ mostly " +
+          "in WHERE they peak, not how " +
+          "sharp they are — row entropies here are " +
+          ents.map(function (e) { return TQ.fmt(e, 2); }).join(" / ") +
+          " (uniform ceiling ln 6 = " + TQ.fmt(Math.log(n), 2) + "). The bottom UNION row is the elementwise " +
+          "max across the ENABLED heads: drop to one head and it collapses to that head's narrow row; enable all " +
+          "four and it lights up across keys no single head reached."
+        ));
+      }
+
+      // four head on/off toggles (all default ON) — recompute union live.
+      var cmpToggles = TQ.el("div", { class: "tq-mh-cmp-toggles" });
+      for (var tg = 0; tg < H; tg++) {
+        (function (hIdx) {
+          var tgl = TQ.toggle({
+            label: "Head " + (hIdx + 1),
+            value: true,
+            onChange: function (on) { enabledHeads[hIdx] = on; renderCompare(); }
+          });
+          cmpToggles.appendChild(tgl.el);
+        })(tg);
+      }
+
+      var compareBlock = TQ.block(
+        TQ.h(2, "Same query, four lenses — and what they cover together"),
+        TQ.p(
+          "The tabs above show one head at a time, so you have to hold one 6×6 grid in your head while you flip ",
+          "to the next. Here is the comparison the tabs can't make: pick a query (the ",
+          TQ.el("strong", { text: "same selector that drives Concat below" }),
+          ") and see all four heads' attention ", TQ.el("strong", { text: "rows" }),
+          " for it, stacked on the same six key columns."
+        ),
+        TQ.p(
+          "The bottom ", TQ.el("strong", { text: "union" }), " row is computed live as the elementwise ",
+          TQ.math("max"), " across the enabled heads. Toggle heads off and watch coverage shrink to a single ",
+          "narrow row; turn them back on and the union blooms across keys no single head reaches alone — the ",
+          "concrete meaning of \"multiple simultaneous ways to relate tokens.\""
+        ),
+        TQ.el("div", { class: "tq-controls-row" },
+          TQ.el("div", {},
+            TQ.el("div", { class: "tq-slider-label", style: { marginBottom: "6px" } }, "Heads in the union"),
+            cmpToggles)
+        ),
+        comparePanel,
+        TQ.callout(
+          "No single head covers cat→{The, mat, on} at once — the bank does. That breadth is exactly what " +
+          "Concat + Wo merges into one vector next."
+        )
+      );
+      renderCompare();
+      root.appendChild(compareBlock);
 
       /* --------------------------- Concat + Wo panel (depends on selQuery) */
       function renderConcat() {
@@ -373,7 +517,15 @@
         ".tq-mh-headvec{display:flex;flex-direction:column;gap:4px;transition:opacity .2s}" +
         ".tq-mh-headvec.is-dim{opacity:.32}" +
         ".tq-mh-headvec-label{display:flex;align-items:center;gap:8px;font-size:12px;" +
-          "color:var(--ink-mute);font-family:var(--mono)}");
+          "color:var(--ink-mute);font-family:var(--mono)}" +
+        ".tq-mh-cmp{display:flex;flex-direction:column;gap:14px}" +
+        ".tq-mh-cmp-grid{display:flex;flex-direction:column;gap:6px}" +
+        ".tq-mh-cmp-row{transition:opacity .2s}" +
+        ".tq-mh-cmp-row.is-off{opacity:.3}" +
+        ".tq-mh-cmp-union{margin-top:4px}" +
+        ".tq-mh-cmp-union .tq-heatmap{outline:1px solid var(--accent);outline-offset:3px;border-radius:6px}" +
+        ".tq-mh-cmp-toggles{display:flex;gap:16px;flex-wrap:wrap;margin:8px 0}" +
+        ".tq-mh-cmp-readout{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:4px 0}");
     },
 
     quiz: [

@@ -99,7 +99,9 @@
           "Two payoffs. (1) It's deterministic and unbounded — position 5000 gets a clean code even if you ",
           "never trained past 512, so it ", TQ.el("strong", { text: "extrapolates" }), ". (2) The relative ",
           "offset between two positions is a fixed linear (rotation) function of their PEs, which lets attention ",
-          "learn \"attend 3 tokens back\" as a single pattern."
+          "learn \"attend 3 tokens back\" as a single pattern — ",
+          TQ.el("strong", { text: "see Panel D" }), ", where you slide the absolute position and watch the ",
+          "similarity refuse to move."
         ),
         TQ.callout(
           "This is the fixed, hand-designed scheme. Modern models often skip it for RoPE, which rotates Q and K " +
@@ -224,9 +226,11 @@
         waveInfo.appendChild(TQ.note(
           isSin
             ? "This column is the SINE of its frequency. Its partner (dim " + pairHi + ") is the COSINE at the " +
-              "same frequency — 90° out of phase. A sin/cos pair is exactly what makes relative position a clean rotation."
+              "same frequency — 90° out of phase. A sin/cos pair is exactly what makes relative position a clean " +
+              "rotation — the property Panel D measures: PE(p)·PE(p+k) depends only on the gap k, not on p."
             : "This column is the COSINE of its frequency. Its partner (dim " + pairLo + ") is the SINE at the " +
-              "same frequency — 90° out of phase. A sin/cos pair is exactly what makes relative position a clean rotation."
+              "same frequency — 90° out of phase. A sin/cos pair is exactly what makes relative position a clean " +
+              "rotation — the property Panel D measures: PE(p)·PE(p+k) depends only on the gap k, not on p."
         ));
       }
 
@@ -469,6 +473,238 @@
       updateC();
       root.appendChild(panelC);
 
+      /* ============ PANEL D: relative position — the dot product only sees the gap */
+      var panelD = TQ.block(
+        TQ.h(2, "Panel D · Relative position: the dot product only sees the gap"),
+        TQ.p(
+          "Panel C proved we ", TQ.el("strong", { text: "need" }), " order. This panel shows ",
+          TQ.el("strong", { text: "why sinusoids in particular" }),
+          ". Take two positions a fixed offset ", TQ.math("k"), " apart and dot their codes: ",
+          TQ.math("sim(p, k) = PE(p) · PE(p+k)"),
+          ". The astonishing part — slide the reference position ", TQ.math("p"),
+          " with ", TQ.math("k"), " held fixed and the dot product barely moves, even though the two raw ",
+          "vectors underneath churn wildly. The similarity depends almost entirely on the ",
+          TQ.el("strong", { text: "gap" }), ", not on where you start. That is exactly what lets attention ",
+          "learn \"attend ", TQ.math("k"), " tokens back\" as one reusable pattern."
+        )
+      );
+
+      // A tall, real PE table so p and k slide over a genuine range. d stays 16.
+      var nPosD = 40;
+      var Kmax = 12;
+      var peD = TQ.sinusoidalPE(nPosD, d); // 40 x 16 sinusoids — all real
+      var stateD = { p: 4, k: 3, kAlt: 5, overlay: false };
+
+      function simD(a, b) { return TQ.dot(peD[a], peD[b]); } // PE[a]·PE[b]
+
+      // s(k) = PE[ref]·PE[ref+kk] for kk in 0..Kmax — the offset curve from one ref.
+      function offsetCurve(ref) {
+        var s = [];
+        for (var kk = 0; kk <= Kmax; kk++) s.push(simD(ref, ref + kk));
+        return s;
+      }
+
+      // Sample the pinned similarity at the CURRENT k across several reference
+      // positions p' = 0,4,8,... (all valid, i.e. p'+k < nPosD). The spread of
+      // these is the live "drift" — translation-invariance turned into a number.
+      function driftSamples(k) {
+        var vals = [];
+        for (var pp = 0; pp + k < nPosD; pp += 4) vals.push(simD(pp, pp + k));
+        return vals;
+      }
+
+      var ctrlP = TQ.slider({
+        min: 0, max: nPosD - 1 - Kmax, step: 1, value: stateD.p, label: "reference position p",
+        format: function (v) { return "p = " + Math.round(v); },
+        onInput: function (v) { stateD.p = Math.round(v); updateD(); }
+      });
+      var ctrlK = TQ.slider({
+        min: 0, max: Kmax, step: 1, value: stateD.k, label: "offset k",
+        format: function (v) { return "k = " + Math.round(v); },
+        onInput: function (v) { stateD.k = Math.round(v); updateD(); }
+      });
+      var ctrlKalt = TQ.segmented({
+        options: [{ label: "k′ = 1", value: 1 }, { label: "k′ = 5", value: 5 }, { label: "k′ = 9", value: 9 }],
+        value: stateD.kAlt,
+        onChange: function (v) { stateD.kAlt = v; updateD(); }
+      });
+      var ctrlOverlay = TQ.toggle({
+        label: "overlay the curve at a second reference position (p + 7)",
+        value: stateD.overlay,
+        onChange: function (v) { stateD.overlay = v; updateD(); }
+      });
+
+      // The similarity-vs-offset canvas. Draws s(k) for the current p (and,
+      // when overlay is on, for p2 = p+7) with the chosen k marked.
+      var curveCanvas = TQ.canvasPanel(380, 220, function (ctx, w, h) {
+        drawCurveD(ctx, w, h);
+      });
+      var pinOut = TQ.el("div", { class: "tq-panel tq-pe-pin" });
+      var vecOut = TQ.el("div", { class: "tq-pe-relcol" });
+      var curveCap = TQ.el("div", { class: "tq-pe-relcap" });
+
+      function curveExtent() {
+        // y-range across every curve we might draw, so axes are stable while sliding.
+        var all = offsetCurve(stateD.p);
+        var p2 = stateD.p + 7;
+        if (p2 + Kmax < nPosD) all = all.concat(offsetCurve(p2));
+        return { lo: Math.min(0, TQ.minOf(all)), hi: TQ.maxOf(all) };
+      }
+
+      function drawCurveD(ctx, w, h) {
+        var ext = curveExtent();
+        var lo = ext.lo, hi = ext.hi, span = (hi - lo) || 1;
+        var pad = 30;
+        var x0 = pad, x1 = w - 12, y0 = 14, y1 = h - 26;
+        function px(kk) { return x0 + (kk / Kmax) * (x1 - x0); }
+        function py(v) { return y1 - ((v - lo) / span) * (y1 - y0); }
+
+        // axes
+        ctx.strokeStyle = TQ.cssVar("--ink", 0.16, "#e9edf8");
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x0, y1); ctx.stroke();   // y axis
+        ctx.beginPath(); ctx.moveTo(x0, py(0)); ctx.lineTo(x1, py(0)); ctx.stroke(); // y=0
+        ctx.fillStyle = TQ.cssVar("--ink", 0.6, "#e8ecf6");
+        ctx.font = "10px ui-monospace, monospace";
+        ctx.fillText("sim", 4, y0 + 8);
+        ctx.fillText("0", 12, py(0) + 3);
+        ctx.fillText("k=0", x0 - 4, y1 + 14);
+        ctx.fillText("k=" + Kmax, x1 - 30, y1 + 14);
+
+        function plot(ref, t, withPoints) {
+          var s = offsetCurve(ref);
+          ctx.strokeStyle = TQ.colorFor(t);
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          for (var kk = 0; kk <= Kmax; kk++) {
+            if (kk === 0) ctx.moveTo(px(kk), py(s[kk])); else ctx.lineTo(px(kk), py(s[kk]));
+          }
+          ctx.stroke();
+          if (withPoints) {
+            for (var q = 0; q <= Kmax; q++) {
+              ctx.fillStyle = TQ.colorFor(t);
+              ctx.globalAlpha = 0.7;
+              ctx.beginPath(); ctx.arc(px(q), py(s[q]), 2.5, 0, Math.PI * 2); ctx.fill();
+              ctx.globalAlpha = 1;
+            }
+          }
+        }
+
+        // overlay curve at p2 first (so it sits under the primary), then primary.
+        var p2 = stateD.p + 7;
+        if (stateD.overlay && p2 + Kmax < nPosD) plot(p2, 0.5, false);
+        plot(stateD.p, 0.82, true);
+
+        // mark the chosen k on the primary curve.
+        var sk = simD(stateD.p, stateD.p + stateD.k);
+        var mx = px(stateD.k), my = py(sk);
+        ctx.strokeStyle = TQ.cssVar("--ink", 0.28, "#e8ecf6");
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(mx, py(0)); ctx.lineTo(mx, my); ctx.stroke();
+        ctx.fillStyle = TQ.colorForSigned(sk, Math.max(Math.abs(hi), Math.abs(lo), 1));
+        ctx.beginPath(); ctx.arc(mx, my, 5, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = TQ.cssVar("--accent", 1, "#f2a93b");
+        ctx.lineWidth = 1.5; ctx.stroke();
+        ctx.fillStyle = TQ.cssVar("--ink", 0.85, "#e8ecf6");
+        ctx.font = "11px ui-monospace, monospace";
+        ctx.textAlign = "center";
+        ctx.fillText("k=" + stateD.k + " · " + TQ.fmt(sk, 3), mx, my - 9);
+        ctx.textAlign = "left";
+      }
+
+      function updateD() {
+        var p = stateD.p, k = stateD.k, kAlt = stateD.kAlt;
+        var simK = simD(p, p + k);                 // PE(p)·PE(p+k)
+        var simK2 = simD(p, p + kAlt);             // control offset PE(p)·PE(p+k′)
+        var selfSim = simD(p, p);                  // the k=0 peak
+
+        // drift across reference positions at the CURRENT k.
+        var ds = driftSamples(k);
+        var drift = TQ.maxOf(ds) - TQ.minOf(ds);
+
+        curveCanvas.redraw();
+
+        // (1) pinned readout + drift badge + control chip
+        pinOut.innerHTML = "";
+        pinOut.appendChild(TQ.el("div", { class: "tq-pe-relrow" },
+          TQ.el("div", { class: "tq-sim-cos" },
+            TQ.el("span", { class: "tq-stat-cap", text: "PE(p) · PE(p+k)   [p = " + p + ", k = " + k + "]" }),
+            TQ.el("span", { class: "tq-stat-big", text: TQ.fmt(simK, 3) })
+          ),
+          (drift < 1e-6
+            ? TQ.badge("invariant to absolute position", "good")
+            : TQ.badge("drifts at this k", "info"))
+        ));
+        pinOut.appendChild(TQ.el("div", { class: "tq-pe-chips" },
+          TQ.kv("drift across p", TQ.fmt(drift, 4)),
+          TQ.kv("sampled p′", "0, 4, … (" + ds.length + " refs)"),
+          TQ.kv("self-similarity (k=0)", TQ.fmt(selfSim, 3))
+        ));
+        pinOut.appendChild(TQ.el("div", { class: "tq-pe-relrow" },
+          TQ.el("div", { class: "tq-sim-cos" },
+            TQ.el("span", { class: "tq-stat-cap", text: "control: PE(p) · PE(p+k′)   [k′ = " + kAlt + "]" }),
+            TQ.el("span", { class: "tq-stat-big", text: TQ.fmt(simK2, 3) })
+          ),
+          TQ.badge("different offset → different similarity", "info")
+        ));
+
+        // (3) the two raw vectors that churn while the dot product holds
+        vecOut.innerHTML = "";
+        vecOut.appendChild(TQ.vectorView(peD[p], { label: "PE(p = " + p + ")", cellSize: 18, max: 1 }));
+        vecOut.appendChild(TQ.vectorView(peD[p + k], { label: "PE(p+k = " + (p + k) + ")", cellSize: 18, max: 1 }));
+
+        // (2)/overlay caption: how close are the two curves?
+        curveCap.innerHTML = "";
+        var p2 = p + 7;
+        if (stateD.overlay && p2 + Kmax < nPosD) {
+          var c1 = offsetCurve(p), c2 = offsetCurve(p2);
+          var gaps = [];
+          for (var kk = 0; kk <= Kmax; kk++) gaps.push(Math.abs(c1[kk] - c2[kk]));
+          var maxGap = TQ.maxOf(gaps);
+          curveCap.appendChild(TQ.el("span", { text:
+            "Two curves: s(k) at p = " + p + " and at p2 = " + p2 + ". Largest vertical gap across all k is " }));
+          curveCap.appendChild(TQ.el("strong", { text: TQ.fmt(maxGap, 4) }));
+          curveCap.appendChild(TQ.el("span", { text: " — the curve barely depends on where you start." }));
+        } else {
+          curveCap.appendChild(TQ.el("span", { text:
+            "s(k) = PE(" + p + ")·PE(" + p + "+k) over k = 0…" + Kmax +
+            ". Peaks at k = 0 (self-similarity " + TQ.fmt(selfSim, 2) + ") and decays as the gap grows — " +
+            "that decay is a usable notion of relative distance. Toggle the overlay to prove it barely moves with p." }));
+        }
+      }
+
+      panelD.appendChild(TQ.el("div", { class: "tq-controls-row" }, ctrlP.el, ctrlK.el));
+      panelD.appendChild(TQ.el("div", { class: "tq-controls-row" },
+        TQ.el("div", {},
+          TQ.el("div", { class: "tq-slider-label", style: { marginBottom: "6px" } }, "control offset k′"),
+          ctrlKalt.el
+        ),
+        TQ.el("div", {}, ctrlOverlay.el)
+      ));
+      panelD.appendChild(TQ.el("div", { class: "tq-flexrow tq-pe-drow" },
+        TQ.el("div", { class: "tq-pe-relcol tq-grow" }, pinOut, vecOut),
+        TQ.el("div", { class: "tq-panel tq-pe-curvecol" },
+          TQ.el("div", { class: "tq-slider-label", text: "similarity vs offset   s(k) = PE(p)·PE(p+k)" }),
+          curveCanvas.el,
+          curveCap
+        )
+      ));
+      panelD.appendChild(TQ.note(
+        "This is exact, not approximate — and it holds at ANY d_model, including the 16 used here. Each sin·sin + " +
+        "cos·cos pair collapses to cos(k / 10000^(2i/d)), in which the absolute position p has cancelled, so " +
+        "PE(p)·PE(p+k) = Σ_i cos(k / 10000^(2i/d)) is provably a function of the gap k alone. The drift you see " +
+        "(~1e-15) is pure floating-point rounding, not a truncation artifact. Slide p and watch the readout hold " +
+        "to the displayed precision while the two vectors above recolor completely."
+      ));
+      panelD.appendChild(TQ.callout(
+        "This is the deep reason sinusoids beat arbitrary learned tags: a single relative offset k always produces " +
+        "the same similarity, anywhere in the sequence. Attention can learn one \"look k tokens back\" pattern and " +
+        "reuse it at every position — and RoPE (the L9 payoff) takes this idea further, baking the rotation directly " +
+        "into Q and K instead of adding a vector at all."
+      ));
+      updateD();
+      root.appendChild(panelD);
+
       /* ----------------------------------------------------- wrap-up */
       root.appendChild(TQ.block(
         TQ.h(2, "Takeaway"),
@@ -495,7 +731,13 @@
         ".tq-pe-statenote{color:var(--ink-mute);font-size:13px}" +
         ".tq-pe-crow{align-items:flex-start;gap:20px;margin-bottom:10px}" +
         ".tq-pe-col{flex:1 1 240px;min-width:220px;display:flex;flex-direction:column;gap:8px}" +
-        ".tq-pe-deltawrap{display:flex;flex-direction:column;gap:8px;margin-top:8px}");
+        ".tq-pe-deltawrap{display:flex;flex-direction:column;gap:8px;margin-top:8px}" +
+        ".tq-pe-drow{align-items:flex-start;gap:20px}" +
+        ".tq-pe-relcol{display:flex;flex-direction:column;gap:10px;min-width:300px}" +
+        ".tq-pe-curvecol{min-width:392px;display:flex;flex-direction:column;gap:10px}" +
+        ".tq-pe-pin{display:flex;flex-direction:column;gap:10px;padding:12px}" +
+        ".tq-pe-relrow{display:flex;align-items:center;gap:14px;flex-wrap:wrap}" +
+        ".tq-pe-relcap{font-size:13px;color:var(--ink-mute);line-height:1.5}");
     },
 
     quiz: [

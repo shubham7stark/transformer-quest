@@ -104,6 +104,25 @@
         )
       ));
 
+      root.appendChild(TQ.block(
+        TQ.h(2, "Causal masking: how a decoder forbids peeking at the future"),
+        TQ.p(
+          "Everything so far let every token attend to every other token — including ones to its RIGHT. That's fine ",
+          "for an encoder, but a ", TQ.el("strong", { text: "decoder" }), " generates left-to-right: when it predicts ",
+          "token i it cannot be allowed to look at tokens it hasn't produced yet. The fix is a ",
+          TQ.el("strong", { text: "causal mask" }), " — before softmax, set every \"future\" score ",
+          TQ.math("S[i,j] with j>i"), " to ", TQ.math("−∞"), ". Since ", TQ.math("exp(−∞)=0"),
+          ", those cells get exactly zero weight, and — this is the load-bearing part — softmax ",
+          TQ.el("strong", { text: "renormalizes the surviving cells in that same row so they still sum to 1.0" }),
+          ". The masked mass doesn't vanish; it gets redistributed to the past."
+        ),
+        TQ.note(
+          "Flip the new \"causal mask (decoder)\" toggle in the lab below and watch the upper triangle of the heatmap " +
+          "go dark while the surviving cells in each row brighten to absorb the freed weight — the row-Σ chip stays " +
+          "pinned at 1.000 the whole time. That redistribution is the entire idea, and it's invisible in a static grid."
+        )
+      ));
+
       /* ================================================================== *
        *  PRIMARY INTERACTIVE — the scaled-dot-product attention lab
        * ================================================================== */
@@ -116,7 +135,10 @@
           "token — raw ", TQ.math("Q·K"), ", scaled (÷scale), and the softmax weight. Drag the ",
           TQ.el("strong", { text: "scaling-factor slider" }), ": as the divisor shrinks toward 0 you'll watch the ",
           "row sharpen and the ", TQ.el("strong", { text: "peak weight" }), " climb toward 1.0 (softmax saturating ",
-          "into a near-one-hot spike). At the proper ", TQ.math("√dk"), " it sits in a smooth, healthy regime."
+          "into a near-one-hot spike). At the proper ", TQ.math("√dk"), " it sits in a smooth, healthy regime. ",
+          "Flip the ", TQ.el("strong", { text: "causal mask (decoder)" }), " toggle to block future keys ",
+          "(", TQ.math("j>i"), "): the upper triangle drops to 0.000 and each row renormalizes over the past — ",
+          "the row-Σ chip stays at 1.000 throughout."
         )
       );
 
@@ -127,6 +149,7 @@
       var qkv, baseScores, V, sqrtDk;
       var divisor = Math.sqrt(dk);
       var selectedRow = 0;
+      var causal = false; // decoder causal mask: block future keys (j > i)
 
       function rebuildForDk(newDk) {
         dk = newDk;
@@ -138,10 +161,29 @@
       }
       rebuildForDk(dk);
 
-      // weights from the CURRENT divisor — genuine recompute through softmax.
+      // Apply the causal mask to a copy of the base scores: future keys (j > i)
+      // get −∞ so exp() drives them to exactly 0. When causal is off, returns
+      // baseScores untouched. (Math.exp(-Infinity) === 0, so masked cells get
+      // EXACTLY zero weight and the surviving cells renormalize to sum to 1.0.)
+      function maskedScores() {
+        if (!causal) return baseScores;
+        var M = [];
+        for (var i = 0; i < baseScores.length; i++) {
+          var row = [];
+          for (var j = 0; j < baseScores[i].length; j++) {
+            row.push(j > i ? -Infinity : baseScores[i][j]);
+          }
+          M.push(row);
+        }
+        return M;
+      }
+
+      // weights from the CURRENT divisor (and mask) — genuine recompute through
+      // softmax. The mask is applied to the UNscaled scores, then the existing
+      // /scale + softmax pipeline runs unchanged.
       function computeWeights() {
-        var scaled = TQ.scaleMat(baseScores, 1 / divisor); // Sᵢⱼ / s
-        return TQ.softmaxRows(scaled);                     // per-row softmax
+        var scaled = TQ.scaleMat(maskedScores(), 1 / divisor); // Sᵢⱼ / s  (−∞ stays −∞)
+        return TQ.softmaxRows(scaled);                         // per-row softmax
       }
 
       // peak weight of the selected row + mean of every row's max (saturation metric)
@@ -155,6 +197,8 @@
       var heatHolder = TQ.el("div", { class: "tq-grow" });
       var statRow = TQ.el("div", { class: "tq-sa-stats" });
       var breakdown = TQ.el("div", { class: "tq-panel tq-sa-breakdown" });
+      // renormalization-proof callout under the heatmap, shown only when masked
+      var maskCallout = TQ.el("div", { class: "tq-callout tq-sa-maskcallout", style: { display: "none" } });
 
       // legend (shared color language)
       var legend = TQ.el("div", { class: "tq-legend" },
@@ -168,8 +212,24 @@
           rowLabels: tokens, colLabels: tokens, cellSize: 46,
           min: 0, max: 1, // fixed scale so colors mean the same probability everywhere
           selectedRow: selectedRow,
-          format: function (v) { return TQ.fmt(v, 2); }
+          // masked (future) cells are genuine 0 under the mask — render '∅' so
+          // they read as "forbidden", not merely "tiny".
+          format: function (v) { return (causal && v === 0) ? "∅" : TQ.fmt(v, 2); }
         });
+      }
+
+      // After a heatmap is built, tag the strict-upper-triangle cells as masked
+      // (only when causal is on) so scoped CSS can dim them. Purely cosmetic —
+      // the numbers themselves are already 0 from the −∞ softmax.
+      function markMasked(node) {
+        var cells = node.querySelectorAll(".tq-hm-cell");
+        var k = 0;
+        for (var r = 0; r < n; r++) {
+          for (var c = 0; c < n; c++) {
+            if (causal && c > r) cells[k].classList.add("is-masked");
+            k++;
+          }
+        }
       }
 
       // rewire heatmap cells: clicking ANY cell selects that token's query row.
@@ -205,7 +265,8 @@
         var peakStat = TQ.el("div", { class: "tq-sa-peak" },
           TQ.el("span", { class: "tq-stat-cap", text: "peak weight (row " + tokens[selectedRow] + ")" }),
           TQ.el("span", { class: "tq-stat-big", text: TQ.fmt(peak, 3) }),
-          TQ.badge(regime[0], regime[1])
+          TQ.badge(regime[0], regime[1]),
+          causal ? TQ.badge("causal · lower-triangular", "info") : null
         );
         statRow.appendChild(peakStat);
         statRow.appendChild(TQ.el("div", { class: "tq-sa-chips" },
@@ -219,8 +280,11 @@
       function renderBreakdown(weights) {
         breakdown.innerHTML = "";
         var r = selectedRow;
-        var raw = baseScores[r];
-        var scaled = raw.map(function (x) { return x / divisor; });
+        // For the bar DISPLAY of stages 1 & 2, show masked future entries as 0 so
+        // TQ.barRow never tries to draw −∞. The actual softmax (stage 3 / weights)
+        // still used −∞ internally, so its zeros are genuinely computed.
+        var raw = baseScores[r].map(function (x, j) { return (causal && j > r) ? 0 : x; });
+        var scaled = raw.map(function (x, j) { return (causal && j > r) ? 0 : x / divisor; });
         var w = weights[r];
         var rawMax = TQ.maxOf([].concat.apply([], baseScores).map(function (x) { return Math.abs(x); }));
 
@@ -248,8 +312,12 @@
             TQ.el("span", { class: "tq-sa-stage-n", text: "2" }),
             TQ.el("span", { text: "scaled  ÷ " + TQ.fmt(divisor, 2) })
           ),
+          // Stage 2 gets its OWN bar scale (rawMax/divisor) so the bars never
+          // clamp when the divisor < 1 (scaled magnitudes exceed the raw range).
+          // Keeping each stage on its own scale is what makes the "uniform
+          // shrink/grow" read correctly across the whole divisor range.
           TQ.barRow(scaled, {
-            labels: tokens, max: rawMax || 1,
+            labels: tokens, max: (rawMax / divisor) || 1,
             format: function (v) { return TQ.fmt(v, 2); }
           })
         ));
@@ -278,10 +346,26 @@
         var weights = computeWeights();
         var fresh = buildHeat(weights);
         rewire(fresh);
+        markMasked(fresh);
         if (heatHolder.firstChild) heatHolder.replaceChild(fresh, heatHolder.firstChild);
         else heatHolder.appendChild(fresh);
         renderStats(weights);
         renderBreakdown(weights);
+        // the renormalization-proof callout under the heatmap appears only when masked
+        maskCallout.style.display = causal ? "" : "none";
+        if (causal) {
+          var rs = TQ.sum(weights[selectedRow]);
+          maskCallout.innerHTML = "";
+          maskCallout.appendChild(TQ.el("span", { class: "tq-callout-mark", text: "✦", "aria-hidden": "true" }));
+          maskCallout.appendChild(TQ.el("div", { class: "tq-callout-body" },
+            "Row ", TQ.el("strong", { text: "\"" + tokens[selectedRow] + "\"" }),
+            " now blocks the " + (n - 1 - selectedRow) + " future key" + ((n - 1 - selectedRow) === 1 ? "" : "s") +
+            " to its right (shown ∅). Softmax redistributed that mass across the " + (selectedRow + 1) +
+            " allowed cell" + (selectedRow === 0 ? "" : "s") + " — and the row still sums to ",
+            TQ.el("strong", { text: TQ.fmt(rs, 3) }),
+            ". Masking didn't delete probability; it relocated it to the past."
+          ));
+        }
       }
 
       function selectRow(r) {
@@ -304,6 +388,12 @@
         divisor = sqrtDk;
         slider.set(divisor);
         refresh();
+      });
+
+      var causalToggle = TQ.toggle({
+        label: "causal mask (decoder) — block future keys (j>i)",
+        value: false,
+        onChange: function (on) { causal = on; refresh(); }
       });
 
       var dkSeg = TQ.segmented({
@@ -329,13 +419,17 @@
           TQ.el("div", { class: "tq-slider-label", style: { marginBottom: "6px" } }, "head size dk"),
           dkSeg.el
         ),
-        TQ.el("div", { class: "tq-sa-ctrl-cell" }, snapBtn)
+        TQ.el("div", { class: "tq-sa-ctrl-cell" }, snapBtn),
+        TQ.el("div", { class: "tq-sa-ctrl-cell tq-sa-maskcell" },
+          TQ.el("div", { class: "tq-slider-label", style: { marginBottom: "6px" } }, "masking"),
+          causalToggle.el
+        )
       );
 
       lab.appendChild(controls);
       lab.appendChild(legend);
       lab.appendChild(TQ.el("div", { class: "tq-flexrow tq-sa-row" },
-        TQ.el("div", { class: "tq-flexcol tq-grow", style: { gap: "10px" } }, heatHolder, statRow),
+        TQ.el("div", { class: "tq-flexcol tq-grow", style: { gap: "10px" } }, heatHolder, statRow, maskCallout),
         breakdown
       ));
       lab.appendChild(TQ.callout(
@@ -364,7 +458,14 @@
           "model can attend along multiple relationships at once."
         ),
         TQ.callout("Mental model to carry forward: attention = data-dependent routing. The weights are a fresh " +
-                   "softmax over learned dot products every forward pass — there is no fixed kernel.")
+                   "softmax over learned dot products every forward pass — there is no fixed kernel."),
+        TQ.p(
+          "You also saw the ", TQ.el("strong", { text: "causal mask" }), " mechanic up close: −∞ on the future, then ",
+          "softmax renormalizes so every row still sums to 1.0. Hold onto that. In Levels 6 and 7 you'll meet it again ",
+          "from the other side — there the decoder's KV-cache makes masking essentially ", TQ.el("em", { text: "free" }),
+          ", because future positions simply don't exist in the cache yet. Same rule (\"only look left\"), seen here as ",
+          "the mechanism and there as why it costs nothing to enforce."
+        )
       ));
 
       /* small scoped styles (colors via CSS variables only — no hardcoded hex) */
@@ -381,7 +482,14 @@
         ".tq-sa-stage-label{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--ink-soft)}" +
         ".tq-sa-stage-n{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;" +
           "border-radius:50%;background:var(--panel-hi);border:1px solid var(--line);font-size:11px;font-weight:700}" +
-        ".tq-sa-bd-title{font-size:15px}");
+        ".tq-sa-bd-title{font-size:15px}" +
+        // causal-mask treatment: dim the strict-upper-triangle cells, mute their
+        // '∅' glyph, and drop a subtle diagonal hatch so "forbidden" reads at a glance.
+        ".tq-hm-cell.is-masked{opacity:.32;filter:saturate(.4)}" +
+        ".tq-hm-cell.is-masked .tq-hm-val{color:var(--ink-mute)}" +
+        ".tq-hm-cell.is-masked.is-rowsel{opacity:.45}" +
+        ".tq-sa-maskcell{min-width:200px}" +
+        ".tq-sa-maskcallout{margin-top:2px}");
     },
 
     quiz: [
