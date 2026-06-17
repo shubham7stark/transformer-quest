@@ -5261,7 +5261,8 @@ button { font-family: inherit; }
     objectives: [
       "Assemble a full block: Multi-Head Attention → residual+LayerNorm → FFN → residual+LayerNorm",
       "Map residual connections onto your CNN skip-connection (ResNet) intuition",
-      "Understand why we LayerNorm (stable activation scale → trainable deep stacks)"
+      "Understand why we LayerNorm (stable activation scale → trainable deep stacks)",
+      "Tell encoder (bidirectional), decoder-only (causal), and encoder–decoder (adds cross-attention) blocks apart"
     ],
 
     render: function (root) {
@@ -5649,43 +5650,335 @@ button { font-family: inherit; }
       ));
 
       /* ----------------------------------- encoder vs decoder vs decoder-only */
-      root.appendChild(TQ.block(
+      var archBlock = TQ.block(
         TQ.h(2, "Two flavors of block: encoder vs decoder (and why we go decoder-only)"),
         TQ.p(
-          "The block you just assembled comes in two flavors. An ", TQ.el("strong", { text: "encoder block" }),
-          " uses ", TQ.el("strong", { text: "bidirectional" }), " self-attention — no mask, every token may look both " +
-          "left and right — so it builds a rich representation of an entire input (great for understanding/classification, " +
-          "e.g. BERT). A ", TQ.el("strong", { text: "decoder block" }), " uses ",
-          TQ.el("strong", { text: "masked" }), " self-attention — each token may attend only to itself and earlier " +
-          "tokens — so it can generate left-to-right without peeking at the future."
+          "The same block comes in three architectures, and they differ in exactly two ways: ",
+          TQ.el("strong", { text: "which attention mask" }), " they use and ",
+          TQ.el("strong", { text: "whether they add a cross-attention sub-layer" }), ". An ",
+          TQ.el("strong", { text: "encoder" }), " (BERT) uses ", TQ.el("strong", { text: "bidirectional" }),
+          " self-attention — no mask, every token sees every token — for understanding. A ",
+          TQ.el("strong", { text: "decoder" }), " (GPT/Llama) uses ", TQ.el("strong", { text: "masked, causal" }),
+          " self-attention — each token sees only itself and earlier tokens — so it generates left-to-right."
         ),
         TQ.p(
-          "The original Transformer was an ", TQ.el("strong", { text: "encoder–decoder" }),
-          " (built for translation): the encoder reads the source sentence, and each decoder block adds a third " +
-          "sub-layer — ", TQ.el("strong", { text: "cross-attention" }), " — where the ",
-          TQ.el("strong", { text: "queries come from the decoder" }), " but the ",
+          "The original Transformer (and T5) is an ", TQ.el("strong", { text: "encoder–decoder" }),
+          ": the encoder reads the source, and each decoder block adds a third sub-layer, ",
+          TQ.el("strong", { text: "cross-attention" }), ", where the ",
+          TQ.el("strong", { text: "query comes from the decoder" }), " but the ",
           TQ.el("strong", { text: "keys and values come from the encoder's output" }),
-          ". That's the only structural difference from the self-attention you already know: Q from one sequence, K/V from another."
+          " — the same scaled-dot-product attention you know, but Q from one sequence and K/V from another."
         ),
-        TQ.el("div", { class: "tq-encdec-diagram", "aria-hidden": "true" },
-          TQ.el("div", { class: "tq-encdec-col" },
-            TQ.el("div", { class: "tq-encdec-cap", text: "Encoder block" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "self-attn (bidirectional, no mask)" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "Add & Norm" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "FFN" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "Add & Norm" })
-          ),
-          TQ.el("div", { class: "tq-encdec-arrow", text: "K,V →" }),
-          TQ.el("div", { class: "tq-encdec-col is-dec" },
-            TQ.el("div", { class: "tq-encdec-cap", text: "Decoder block" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "self-attn (MASKED — past only)" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "Add & Norm" }),
-            TQ.el("div", { class: "tq-encdec-sub is-cross", text: "cross-attn (Q from here, K/V from encoder)" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "Add & Norm" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "FFN" }),
-            TQ.el("div", { class: "tq-encdec-sub", text: "Add & Norm" })
-          )
-        ),
+        TQ.p(
+          TQ.el("em", { text: "This is the very attention from the walkthrough above (same seeds) — now with a mask you can flip." })
+        )
+      );
+
+      /* ---- interactive: architecture mask grid + cross-attn + stack ------- *
+       * Self-contained state (does NOT touch pos/showRaw/depth above). The
+       * self-attn grid reuses the stepper's qkv (TQ.toyQKV(16,101,202,303)),
+       * so the grid IS the walkthrough's attention with the mask toggled. */
+      var arch = "dec";          // 'enc' | 'dec' | 'encdec'
+      var maskSelRow = 0;        // selected query row in the self-attn grid
+      var showMaskOnly = false;  // optional binary-vs-weights view
+
+      // base scores (fixed) — reuse the stepper's qkv, do NOT re-seed.
+      var baseScores = TQ.matmul(qkv.Q, TQ.transpose(qkv.K)); // 6×6
+
+      // Causal mask is on whenever arch is not encoder. Apply −∞ to future keys
+      // (j>i) on a COPY of the base scores (exactly the L3 mechanic), so
+      // exp(−∞)=0 → those cells get genuine 0 weight and surviving cells
+      // renormalize to Σ=1.0.
+      function maskedScores() {
+        if (arch === "enc") return baseScores;
+        var M = [];
+        for (var i = 0; i < baseScores.length; i++) {
+          var row = [];
+          for (var j = 0; j < baseScores[i].length; j++) {
+            row.push(j > i ? -Infinity : baseScores[i][j]);
+          }
+          M.push(row);
+        }
+        return M;
+      }
+      function selfWeights() {
+        return TQ.softmaxRows(TQ.scaleMat(maskedScores(), 1 / Math.sqrt(d)));
+      }
+      // binary allowed(1)/forbidden(0) view used by the "show mask only" toggle.
+      function allowedMatrix() {
+        var M = [];
+        for (var i = 0; i < n; i++) {
+          var row = [];
+          for (var j = 0; j < n; j++) row.push((arch === "enc" || j <= i) ? 1 : 0);
+          M.push(row);
+        }
+        return M;
+      }
+
+      // CROSS-ATTENTION (encdec only): genuinely different sequences.
+      // Decoder queries come from a deterministic 3-token toy target sequence
+      // projected through the SAME Wq; keys/values are the encoder's K/V over
+      // the 6 source tokens. crossW is a fully-unmasked 3×6 whose rows each
+      // sum to 1.0 over all 6 source keys.
+      var tgtLabels = ["tgt₀", "tgt₁", "tgt₂"];
+      var Qdec = TQ.matmul(TQ.randMatrix(3, d, 909), qkv.Wq);     // 3×16 queries FROM decoder
+      var crossScores = TQ.matmul(Qdec, TQ.transpose(qkv.K));     // 3×6, K from encoder
+      var crossW = TQ.softmaxRows(TQ.scaleMat(crossScores, 1 / Math.sqrt(d))); // 3×6 unmasked
+
+      // ---- sub-layer stack contents per architecture ----------------------
+      function stackRows() {
+        if (arch === "enc") {
+          return [
+            { t: "self-attn (bidirectional)" }, { t: "Add & Norm" },
+            { t: "FFN" }, { t: "Add & Norm" }
+          ];
+        }
+        if (arch === "dec") {
+          return [
+            { t: "masked self-attn" }, { t: "Add & Norm" },
+            { t: "FFN" }, { t: "Add & Norm" }
+          ];
+        }
+        return [
+          { t: "masked self-attn" }, { t: "Add & Norm" },
+          { t: "CROSS-attn (Q dec, K/V enc)", cross: true }, { t: "Add & Norm" },
+          { t: "FFN" }, { t: "Add & Norm" }
+        ];
+      }
+
+      // ---- DOM holders ----------------------------------------------------
+      var selfHeatHolder = TQ.el("div", { class: "tq-grow" });
+      var selfCaption = TQ.el("div", { class: "tq-mask-caption" });
+      var selfChips = TQ.el("div", { class: "tq-mask-chips" });
+      var stackHolder = TQ.el("div", { class: "tq-arch-stack" });
+      var crossWrap = TQ.el("div", { class: "tq-arch-cross", style: { display: "none" } });
+      var mechNote = TQ.el("div", { class: "tq-mask-mech", style: { display: "none" } });
+
+      var maskLegend = TQ.el("div", { class: "tq-legend" },
+        TQ.el("span", { text: "0.0" }),
+        TQ.el("div", { class: "tq-legend-scale" }),
+        TQ.el("span", { text: "1.0" })
+      );
+
+      // ---- self-attn heatmap build (mirrors L3 buildHeat/markMasked/rewire) -
+      function buildSelfHeat(weights) {
+        var matrix = showMaskOnly ? allowedMatrix() : weights;
+        return TQ.heatmap(matrix, {
+          rowLabels: tokens, colLabels: tokens, cellSize: 46,
+          min: 0, max: 1, selectedRow: maskSelRow,
+          format: function (v) {
+            if (arch !== "enc" && v === 0) return "∅";
+            return showMaskOnly ? (v > 0 ? "1" : "0") : TQ.fmt(v, 2);
+          }
+        });
+      }
+      function markMasked(node) {
+        var cells = node.querySelectorAll(".tq-hm-cell");
+        var k = 0;
+        for (var r = 0; r < n; r++) {
+          for (var c = 0; c < n; c++) {
+            if (arch !== "enc" && c > r) cells[k].classList.add("is-masked");
+            k++;
+          }
+        }
+      }
+      function rewireSelf(node) {
+        var cells = node.querySelectorAll(".tq-hm-cell");
+        var k = 0;
+        for (var r = 0; r < n; r++) {
+          for (var c = 0; c < n; c++) {
+            (function (rowIdx, colIdx, cell) {
+              cell.classList.add("is-clickable");
+              cell.setAttribute("role", "button");
+              cell.setAttribute("tabindex", "0");
+              var forbidden = (arch !== "enc" && colIdx > rowIdx);
+              cell.addEventListener("click", function () {
+                if (forbidden) showMech(rowIdx, colIdx); else selectMaskRow(rowIdx);
+              });
+              cell.addEventListener("keydown", function (e) {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  if (forbidden) showMech(rowIdx, colIdx); else selectMaskRow(rowIdx);
+                }
+              });
+              if (forbidden) cell.addEventListener("mouseenter", function () { showMech(rowIdx, colIdx); });
+            })(r, c, cells[k]);
+            k++;
+          }
+        }
+      }
+
+      function showMech(i, j) {
+        mechNote.style.display = "";
+        mechNote.innerHTML = "";
+        mechNote.appendChild(TQ.el("span",
+          { class: "tq-mask-mech-mark", text: "∅", "aria-hidden": "true" }));
+        mechNote.appendChild(TQ.el("div", { class: "tq-mask-mech-body" },
+          "Forbidden: key ", TQ.el("strong", { text: "#" + j + " (" + tokens[j] + ")" }),
+          " is in the future of query ", TQ.el("strong", { text: "#" + i + " (" + tokens[i] + ")" }),
+          " (j>i). −∞ before softmax → exp(−∞)=0 → exactly 0 weight."
+        ));
+      }
+
+      // cross-attn heatmap (encdec only)
+      function buildCrossGrid() {
+        crossWrap.innerHTML = "";
+        crossWrap.appendChild(TQ.el("div", { class: "tq-arch-cross-title" },
+          TQ.el("strong", { text: "Cross-attention" }),
+          " — decoder asks, encoder answers. Q and K/V are literally different sequences (rows ≠ cols)."
+        ));
+        var axes = TQ.el("div", { class: "tq-arch-cross-axes" },
+          TQ.el("span", { class: "tq-arch-axis tq-arch-axis-q", text: "Q ← decoder (target ↓)" }),
+          TQ.el("span", { class: "tq-arch-axis tq-arch-axis-kv", text: "K,V ← encoder output (source →)" })
+        );
+        var grid = TQ.heatmap(crossW, {
+          rowLabels: tgtLabels, colLabels: tokens, cellSize: 40,
+          min: 0, max: 1,
+          format: function (v) { return TQ.fmt(v, 2); },
+          onCell: function (r) { selectCrossRow(r); }
+        });
+        crossWrap.appendChild(axes);
+        crossWrap.appendChild(grid);
+        crossWrap.appendChild(crossCaption);
+      }
+      var crossCaption = TQ.el("div", { class: "tq-mask-caption" });
+      function selectCrossRow(r) {
+        crossSelRow = TQ.clamp(r, 0, tgtLabels.length - 1);
+        renderCrossCaption();
+      }
+      var crossSelRow = 0;
+      function renderCrossCaption() {
+        crossCaption.innerHTML = "";
+        var rs = TQ.sum(crossW[crossSelRow]);
+        crossCaption.appendChild(TQ.el("span", {},
+          "Decoder token ", TQ.el("strong", { text: tgtLabels[crossSelRow] }),
+          " attends over ", TQ.el("strong", { text: "all " + n + " source keys" }),
+          " (no mask — the source is fully known). "
+        ));
+        crossCaption.appendChild(TQ.kv("row Σ", TQ.fmt(rs, 3)));
+      }
+
+      // ---- morphing sub-layer stack ---------------------------------------
+      function buildStack() {
+        stackHolder.innerHTML = "";
+        stackHolder.appendChild(TQ.el("div", { class: "tq-arch-stack-cap", text: "Sub-layers" }));
+        var rows = stackRows();
+        for (var i = 0; i < rows.length; i++) {
+          stackHolder.appendChild(TQ.el("div",
+            { class: "tq-arch-chip" + (rows[i].cross ? " is-cross" : ""), text: rows[i].t }));
+        }
+      }
+
+      // ---- caption + Σ chip under the self-attn grid ----------------------
+      function renderSelfCaption(weights) {
+        selfCaption.innerHTML = "";
+        selfChips.innerHTML = "";
+        var r = maskSelRow;
+        if (arch === "enc") {
+          selfCaption.appendChild(TQ.el("span", {},
+            "Query ", TQ.el("strong", { text: "\"" + tokens[r] + "\"" }), " (#", String(r),
+            ") may attend to ", TQ.el("strong", { text: "all " + n + " keys" }),
+            " — bidirectional, no mask."
+          ));
+        } else {
+          var allowedCount = r + 1;
+          var maskedToks = tokens.slice(r + 1);
+          var parts = [
+            "Query ", TQ.el("strong", { text: "\"" + tokens[r] + "\"" }), " (#", String(r),
+            ") may attend to: ",
+            TQ.el("strong", { text: tokens.slice(0, allowedCount).join(", ") }),
+            " — " + allowedCount + " of " + n + " keys"
+          ];
+          if (maskedToks.length) {
+            parts.push("; the " + maskedToks.length + " future key" +
+              (maskedToks.length === 1 ? "" : "s") + " (");
+            parts.push(TQ.el("strong", { text: maskedToks.join(", ") }));
+            parts.push(") "+ (maskedToks.length === 1 ? "is" : "are") + " masked (∅).");
+          } else {
+            parts.push(" (no future keys to mask).");
+          }
+          selfCaption.appendChild(TQ.el("span", {}, parts));
+        }
+        selfChips.appendChild(TQ.kv("row Σ", TQ.fmt(TQ.sum(weights[r]), 3)));
+        selfChips.appendChild(arch === "enc"
+          ? TQ.badge("bidirectional", "info")
+          : TQ.badge("causal · lower-triangular", "info"));
+      }
+
+      // ---- master refresh -------------------------------------------------
+      function refreshArch() {
+        var weights = selfWeights();
+        var fresh = buildSelfHeat(weights);
+        rewireSelf(fresh);
+        markMasked(fresh);
+        if (selfHeatHolder.firstChild) selfHeatHolder.replaceChild(fresh, selfHeatHolder.firstChild);
+        else selfHeatHolder.appendChild(fresh);
+        renderSelfCaption(weights);
+        buildStack();
+        if (arch === "encdec") {
+          crossWrap.style.display = "";
+          buildCrossGrid();
+          renderCrossCaption();
+        } else {
+          crossWrap.style.display = "none";
+        }
+        mechNote.style.display = "none";
+      }
+
+      function setArch(v) {
+        arch = v;
+        maskSelRow = TQ.clamp(maskSelRow, 0, n - 1);
+        refreshArch();
+      }
+      function selectMaskRow(r) {
+        maskSelRow = TQ.clamp(r, 0, n - 1);
+        refreshArch();
+      }
+
+      // ---- controls -------------------------------------------------------
+      var archSeg = TQ.segmented({
+        options: [
+          { label: "Encoder-only (BERT)", value: "enc" },
+          { label: "Decoder-only (GPT/Llama)", value: "dec" },
+          { label: "Encoder–decoder (T5)", value: "encdec" }
+        ],
+        value: "dec",
+        onChange: setArch
+      });
+      var maskOnlyToggle = TQ.toggle({
+        label: "show allowed-mask only (1/0 instead of weights)",
+        value: false,
+        onChange: function (on) { showMaskOnly = on; refreshArch(); }
+      });
+
+      var archControls = TQ.el("div", { class: "tq-arch-controls" },
+        TQ.el("div", { class: "tq-arch-ctrl-cell" },
+          TQ.el("div", { class: "tq-slider-label", style: { marginBottom: "6px" } }, "Architecture"),
+          archSeg.el),
+        TQ.el("div", { class: "tq-arch-ctrl-cell", style: { alignSelf: "flex-end" } }, maskOnlyToggle.el)
+      );
+
+      archBlock.appendChild(archControls);
+      archBlock.appendChild(maskLegend);
+      archBlock.appendChild(TQ.el("div", { class: "tq-arch-row" },
+        TQ.el("div", { class: "tq-flexcol tq-grow", style: { gap: "10px" } },
+          selfHeatHolder, selfChips, selfCaption, mechNote, crossWrap),
+        stackHolder
+      ));
+      archBlock.appendChild(TQ.callout(
+        "Flip the selector and watch only the dark triangle move on identical numbers: ",
+        TQ.el("strong", { text: "encoder" }), " fills the whole square (bidirectional); ",
+        TQ.el("strong", { text: "decoder" }), " masks the future (causal); ",
+        TQ.el("strong", { text: "encoder–decoder" }), " keeps the masked self-attn AND grows a third sub-layer — " +
+        "the cross-attention grid below it, where rows (decoder targets) and columns (encoder source) are " +
+        "genuinely different sequences. Masking relocates probability, never deletes it: every row Σ stays 1.000."
+      ));
+
+      // first paint
+      refreshArch();
+      root.appendChild(archBlock);
+
+      root.appendChild(TQ.block(
         TQ.callout(
           "Modern LLMs (GPT, Llama, DeepSeek) are ", TQ.el("strong", { text: "decoder-only" }),
           ": they drop the encoder and its cross-attention entirely and just stack masked-self-attention decoder " +
@@ -5696,17 +5989,6 @@ button { font-family: inherit; }
 
       /* scoped styles — colors via CSS variables only, no hardcoded hex */
       injectOnce("tq-lvl06-css",
-        ".tq-encdec-diagram{display:flex;align-items:flex-start;gap:14px;flex-wrap:wrap;margin:14px 0 4px}" +
-        ".tq-encdec-col{flex:1 1 220px;min-width:200px;border:1px solid var(--line);border-radius:12px;" +
-          "padding:12px;background:var(--panel-hi)}" +
-        ".tq-encdec-col.is-dec{border-color:var(--accent-2)}" +
-        ".tq-encdec-cap{font-size:13px;font-weight:800;color:var(--ink);margin-bottom:8px;" +
-          "text-transform:uppercase;letter-spacing:.04em}" +
-        ".tq-encdec-sub{font-size:12.5px;color:var(--ink-mute);font-family:var(--mono);" +
-          "border:1px solid var(--line);border-radius:8px;padding:6px 9px;margin:6px 0;background:var(--panel)}" +
-        ".tq-encdec-sub.is-cross{color:var(--accent-2);border-color:var(--accent-2)}" +
-        ".tq-encdec-arrow{align-self:center;font-family:var(--mono);font-size:13px;color:var(--accent-2);" +
-          "font-weight:700;white-space:nowrap}" +
         ".tq-block-controls{align-items:flex-start;gap:22px;flex-wrap:wrap;margin:6px 0 14px}" +
         ".tq-tb-stepper-holder{margin-top:6px}" +
         ".tq-tb-residual{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin:10px 0}" +
@@ -5718,7 +6000,37 @@ button { font-family: inherit; }
         ".tq-tb-stats-title{font-size:12px;font-weight:700;color:var(--ink-mute);" +
           "text-transform:uppercase;letter-spacing:.04em;margin-right:4px}" +
         ".tq-tb-shapecheck{display:flex;align-items:center;gap:10px;margin-top:12px}" +
-        ".tq-tb-arrow{font-family:var(--mono);color:var(--ink-mute);font-size:13px}");
+        ".tq-tb-arrow{font-family:var(--mono);color:var(--ink-mute);font-size:13px}" +
+        /* --- architecture mask grid interactive (tq-arch-* / tq-mask-*) --- */
+        ".tq-arch-controls{display:flex;gap:18px;align-items:flex-end;flex-wrap:wrap;margin:6px 0 12px}" +
+        ".tq-arch-ctrl-cell{display:flex;flex-direction:column;justify-content:flex-end}" +
+        ".tq-arch-row{display:flex;align-items:flex-start;gap:20px;flex-wrap:wrap;margin-top:6px}" +
+        ".tq-arch-stack{flex:0 0 auto;min-width:220px;border:1px solid var(--line);border-radius:12px;" +
+          "padding:12px;background:var(--panel-hi);display:flex;flex-direction:column;gap:6px}" +
+        ".tq-arch-stack-cap{font-size:12px;font-weight:700;color:var(--ink-mute);" +
+          "text-transform:uppercase;letter-spacing:.04em;margin-bottom:2px}" +
+        ".tq-arch-chip{font-size:12.5px;color:var(--ink-mute);font-family:var(--mono);" +
+          "border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--panel);" +
+          "transition:opacity .35s ease,max-height .35s ease,border-color .35s ease}" +
+        ".tq-arch-chip.is-cross{color:var(--accent-2);border-color:var(--accent-2);" +
+          "box-shadow:0 0 0 1px var(--accent-2) inset}" +
+        ".tq-arch-cross{margin-top:8px;border-top:1px dashed var(--line);padding-top:12px}" +
+        ".tq-arch-cross-title{font-size:13px;color:var(--ink-soft);margin-bottom:8px}" +
+        ".tq-arch-cross-axes{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:6px}" +
+        ".tq-arch-axis{font-size:11.5px;font-family:var(--mono);font-weight:700;" +
+          "border:1px solid var(--line);border-radius:6px;padding:3px 7px}" +
+        ".tq-arch-axis-q{color:var(--accent-2);border-color:var(--accent-2)}" +
+        ".tq-arch-axis-kv{color:var(--cool);border-color:var(--cool)}" +
+        ".tq-mask-chips{display:flex;gap:8px;flex-wrap:wrap;align-items:center}" +
+        ".tq-mask-caption{font-size:13.5px;color:var(--ink-soft);line-height:1.5}" +
+        ".tq-mask-mech{display:flex;gap:10px;align-items:flex-start;background:var(--panel-hi);" +
+          "border:1px solid var(--line);border-radius:10px;padding:9px 12px;font-size:13px;color:var(--ink-soft)}" +
+        ".tq-mask-mech-mark{color:var(--ink-mute);font-size:16px;line-height:1.2}" +
+        ".tq-mask-mech-body{flex:1}" +
+        /* causal-mask treatment (own L6 copy — L3's is scoped to tq-lvl03-css) */
+        ".tq-hm-cell.is-masked{opacity:.32;filter:saturate(.4)}" +
+        ".tq-hm-cell.is-masked .tq-hm-val{color:var(--ink-mute)}" +
+        ".tq-hm-cell.is-masked.is-rowsel{opacity:.45}");
     },
 
     quiz: [
