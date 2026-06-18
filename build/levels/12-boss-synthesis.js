@@ -1,5 +1,5 @@
 /* ============================================================================
- * LEVEL 10 — Boss Level: The Whole Picture   (order 10)
+ * LEVEL 12 — Boss Level: The Whole Picture   (order 12)
  * ----------------------------------------------------------------------------
  * Synthesis level. No new math — it threads the SAME toy sentence
  * (TQ.toy) through every stage you've already built, then makes the
@@ -28,14 +28,14 @@
 
   TQ.registerLevel({
     id: "boss-synthesis",
-    order: 10,
+    order: 12,
     title: "Boss Level: The Whole Picture",
     icon: "🏁",
     tagline: "Connect the whole chain — and prove you can reason across it.",
     preread: "All four",
     objectives: [
-      "Recap the full journey: tokens → attention → heads → position → block → KV cache → MHA/MQA/GQA/MLA",
-      "Connect ideas across levels (why scaling, why the cache grows, why MLA wins)",
+      "Recap the full journey: tokens → attention → heads → position → block → KV cache → MHA/MQA/GQA/MLA → MoE → MoH",
+      "Connect ideas across levels (why scaling, why the cache grows, why MLA wins, how MoE/MoH decouple capacity from compute)",
       "Pass a tougher mixed quiz and hit a celebratory completion state"
     ],
 
@@ -70,6 +70,17 @@
           " Click through the pipeline below — the same six-word toy sentence you've followed since Level 1 ",
           "runs through every stage, so the recap is concrete, not abstract."
         ),
+        TQ.p(
+          "And there's one more axis the last two levels opened up: ", TQ.el("strong", { text: "sparsity" }),
+          ". ", TQ.el("strong", { text: "Mixture of Experts (MoE)" }), " replaces the dense FFN sub-layer with a ",
+          "router + ", TQ.math("N"), " expert FFNs, firing only the ", TQ.math("top-k"),
+          " per token — so ", TQ.el("em", { text: "total" }), " params (capacity) grow with ", TQ.math("N"),
+          " while ", TQ.el("em", { text: "active" }), " params (per-token FLOPs) track ", TQ.math("k"), ". ",
+          TQ.el("strong", { text: "Mixture of Heads (MoH)" }), " is that exact same trick applied to attention: a ",
+          "router scores the heads per token, keeps the ", TQ.math("top-k"),
+          ", and weights them — turning multi-head attention's silent equal-weight sum into a learned, sparse one. ",
+          "Both decouple ", TQ.el("strong", { text: "what the model knows from what it spends per token" }), "."
+        ),
         TQ.el("div", { class: "tq-token-strip" },
           tokens.map(function (tk, i) {
             return TQ.el("span", { class: "tq-token-chip" + (i === CAT ? " is-trace" : "") },
@@ -100,8 +111,9 @@
             '<rect x="276" y="38" width="150" height="54" rx="9" fill="none" stroke="var(--line-soft)"/>' +
             '<rect x="270" y="32" width="150" height="54" rx="9" fill="none" stroke="var(--line-soft)"/>' +
             '<rect x="264" y="44" width="150" height="54" rx="9" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
-            '<text x="339" y="64" text-anchor="middle" fill="var(--ink)">transformer block</text>' +
-            '<text x="339" y="78" text-anchor="middle" fill="var(--ink-mute)" font-size="9">attn + FFN, each residual+LN</text>' +
+            '<text x="339" y="62" text-anchor="middle" fill="var(--ink)">transformer block</text>' +
+            '<text x="339" y="75" text-anchor="middle" fill="var(--ink-mute)" font-size="9">attn + FFN, each residual+LN</text>' +
+            '<text x="339" y="86" text-anchor="middle" fill="var(--info)" font-size="8">attn→MoH · FFN→MoE (sparse)</text>' +
             '<text x="339" y="26" text-anchor="middle" fill="var(--accent)" font-size="11">× N</text>' +
             '<rect x="450" y="48" width="92" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
             '<text x="496" y="69" text-anchor="middle" fill="var(--ink)">final LN</text>' +
@@ -126,7 +138,9 @@
           "The whole decoder-only skeleton in one view: tokens → embed (+ positional encoding) → a " +
           "transformer block (attention + FFN, each wrapped in residual + LayerNorm) stacked × N → a " +
           "final LayerNorm → lm_head, producing next-token probabilities. The clickable strip below walks " +
-          "the stages one at a time; this map shows the stacked shape they live inside."
+          "the stages one at a time; this map shows the stacked shape they live inside. Sparsity slots into " +
+          "the block's two sub-layers: the FFN can become a Mixture of Experts (MoE), and attention a " +
+          "Mixture of Heads (MoH) — both fire only top-k per token, so total params grow without growing per-token compute."
         )
       ));
 
@@ -438,6 +452,22 @@
           "paying for it with a separate, ",
           "decoupled RoPE key (a tiny extra key that carries position), because you can't bake rotary position ",
           "into a compressed latent and still rebuild clean per-head keys."
+        ),
+        TQ.p(
+          TQ.el("strong", { text: "MoE and MoH add a fourth axis: sparsity." }),
+          " The first three forces are about a ", TQ.el("em", { text: "dense" }),
+          " model where every parameter fires for every token. Sparsity breaks that tie. ",
+          TQ.el("strong", { text: "MoE" }), " swaps the dense FFN for ", TQ.math("N"),
+          " experts and a router, running only ", TQ.math("k"), " per token: ",
+          TQ.el("strong", { text: "total params" }), " (capacity) scale with ", TQ.math("N"), ", but ",
+          TQ.el("strong", { text: "active params" }), " (the per-token FLOPs) only with ", TQ.math("k"),
+          " — so a model can ", TQ.el("em", { text: "know" }),
+          " far more than it ", TQ.el("em", { text: "computes" }), " (Mixtral fires 2 of 8; DeepSeek-V3, 8 of 256). ",
+          TQ.el("strong", { text: "MoH" }), " is literally MoE applied to attention heads: ",
+          "standard multi-head attention secretly sums all ", TQ.math("H"),
+          " heads with equal weight 1; MoH routes per token, keeps the ", TQ.math("top-k"),
+          " heads, and ", TQ.el("strong", { text: "weights" }), " them — so total heads ", TQ.math("H"),
+          " can grow while active compute stays at ", TQ.math("k"), ". Same decoupling, applied to the other sub-layer."
         )
       ));
 
@@ -592,8 +622,11 @@
         TQ.p(
           "Tokens became vectors. Position got stamped in. Q/K/V let tokens query each other; ", TQ.math("√dk"),
           " kept the softmax sane; many heads read many relationships; residual + LayerNorm + FFN made a block; ",
-          "stacking blocks made a model. And the KV cache — the one thing that survives between tokens — is the ",
-          "wall that MHA, MQA, GQA, and MLA all fight in different ways."
+          "stacking blocks made a model. The KV cache — the one thing that survives between tokens — is the ",
+          "wall that MHA, MQA, GQA, and MLA all fight in different ways. And once the dense block was built, ",
+          TQ.el("strong", { text: "sparsity" }), " let it grow: ", TQ.el("strong", { text: "MoE" }),
+          " makes the FFN a router + many experts (top-k fire), and ", TQ.el("strong", { text: "MoH" }),
+          " does the same to attention heads — both letting total params (capacity) outrun active params (per-token compute)."
         ),
         TQ.callout("The boss takeaway: seq_len is the linear term nobody can delete. Every clever scheme only " +
           "shrinks the PER-TOKEN constant. MLA shrinks it the most while paying the least quality — that's why " +
@@ -713,6 +746,35 @@
         explain: "Cache grows linearly in seq_len because every prior token's K/V must be retained for " +
                  "autoregressive decoding. Head-sharing (MQA/GQA) and latent compression (MLA) shrink the " +
                  "per-token constant; none remove the linear-in-context growth."
+      },
+      {
+        q: "A Mixture-of-Experts layer has N = 8 expert FFNs and routes top-k = 2 per token (no shared expert). Compared to a single dense FFN of the same per-expert size, what is true about its parameters and per-token compute?",
+        choices: [
+          "Both total params and per-token compute grow ~8× — MoE is strictly more expensive everywhere",
+          "Total params grow ~8× (all N experts live in memory = capacity), but per-token compute grows only ~2× (only the top-k = 2 experts run) — capacity is decoupled from FLOPs",
+          "Per-token compute grows ~8× but total params stay the same as one dense FFN",
+          "MoE shrinks total params because experts share weights; compute is unchanged"
+        ],
+        answer: 1,
+        explain: "MoE's whole point is decoupling TOTAL params (all N experts sit in memory ≈ N× the capacity) " +
+                 "from ACTIVE params / per-token FLOPs (only the routed top-k experts run ≈ k×). With N=8, k=2 you " +
+                 "get ~8× the knowledge for ~2× the compute. That's why Mixtral (2 of 8) and DeepSeek-V3 (8 of 256) " +
+                 "are huge in params but cheap per token."
+      },
+      {
+        q: "Mixture of Heads (MoH) is described as 'MoE applied to attention heads.' Which statement captures the analogy most precisely?",
+        choices: [
+          "MoH compresses the KV cache into a latent, exactly like MLA, but for the FFN",
+          "Standard multi-head attention already SUMS all H heads with equal weight 1; MoH adds a router that scores heads per token, keeps the top-k, and replaces the equal weights with learned router weights — the FFN-expert routing of MoE, moved onto attention heads so total heads H can grow without growing active compute k",
+          "MoH runs every head every time but stores the outputs in fp8 to save memory",
+          "MoH and MoE are unrelated: MoE routes tokens to layers, MoH routes layers to tokens"
+        ],
+        answer: 1,
+        explain: "MoE routes each token to top-k of N expert FFNs and weights them; MoH does the identical thing to " +
+                 "attention heads. The key reframing: plain MHA = Concat(head_1..head_H)·Wo is a sum of heads with " +
+                 "weight 1 each — a dense, equal-weight special case. MoH makes that sum sparse (top-k of H) and " +
+                 "weighted (router softmax), so you can scale total heads H while active compute tracks k. Shared " +
+                 "heads (always-on, DeepSeek-style) parallel MoE's shared experts."
       }
     ]
   });

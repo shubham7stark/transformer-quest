@@ -1,6 +1,6 @@
 # 🧠 Transformer Quest
 
-An interactive, **visual** browser game that takes you from **tokens → attention → multi-head → positional encoding → the transformer block → KV cache → MHA/MQA/GQA → MLA**. Drag the knobs, watch *real, deterministically-computed* numbers move, and actually *feel* how modern LLMs work under the hood.
+An interactive, **visual** browser game that takes you from **tokens → attention → multi-head → positional encoding → the transformer block → KV cache → MHA/MQA/GQA → MLA → MoE → MoH**. Drag the knobs, watch *real, deterministically-computed* numbers move, and actually *feel* how modern LLMs work under the hood.
 
 No fake numbers. Every attention weight, dot product, softmax, cosine similarity, and KV-cache memory figure is computed live from the math — not hardcoded.
 
@@ -32,7 +32,7 @@ Progress, XP, and level unlocks are saved in `localStorage`. There's a **reset**
 
 ---
 
-## 🗺️ The 10 levels
+## 🗺️ The 12 levels
 
 Each level is a short explanation + at least one **primary interactive visualization** + a quiz that gates the next level.
 
@@ -47,12 +47,16 @@ Each level is a short explanation + at least one **primary interactive visualiza
 | 7 | **Generation & the KV Cache** | "Generate next token" grows the cache live — the setup for the memory wall |
 | 8 | **MHA → MQA → GQA** | A query→KV head **mapping diagram** that morphs between modes + a live KV-cache memory calculator (drag layers / context / heads / dtype, watch the GB move) |
 | 9 | **Multi-Head Latent Attention (MLA)** | Per-head K/V collapsing into one cached **latent**; a "cache shootout" pitting MLA against MHA/GQA/MQA |
-| 10 | **Boss Level** | A recap diagram + a mixed quiz connecting every idea |
+| 10 | **Mixture of Experts (MoE)** | The dense FFN becomes a **router + N expert FFNs**; watch real top-k routing + an **active-vs-total params** calculator (capacity grows with N, compute with k) |
+| 11 | **Mixture of Heads (MoH)** | MoE applied to **attention heads** — a router scores heads per token, keeps the **top-k**, and weights them; active-vs-total compute as total heads H grow |
+| 12 | **Boss Level** | A recap diagram + a mixed quiz connecting every idea (now incl. MoE/MoH) |
 
 ### Maps to these reads
 - **Basics of Transformers** + **The Illustrated Transformer** → Levels 1–6
 - **Memory-Efficient Attention: MHA vs MQA vs GQA vs MLA** → Levels 7–8 (and 9)
 - **DeepSeek's Multi-Head Latent Attention** → Level 9
+- **Mixtral / DeepSeek-V3 (sparse MoE)** → Level 10
+- **MoH: Multi-Head Attention as Mixture-of-Head Attention** (arXiv 2410.11842) → Level 11
 
 ---
 
@@ -82,7 +86,7 @@ build/                  # the modular sources index.html is assembled from
                         #       + the game engine (map, quiz gating, XP, localStorage)
   styles.css            #   dark theme + the single shared color language
   shell.html            #   HTML skeleton with inline-markers for assembly
-  levels/               #   one self-contained module per level (01..10)
+  levels/               #   one self-contained module per level (01..12)
 screenshots/            # images used in this README
 ```
 
