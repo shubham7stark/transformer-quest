@@ -98,7 +98,8 @@
         TQ.h(2, "The problem attention solves"),
         TQ.p(
           "A CNN mixes information ", TQ.el("strong", { text: "locally" }),
-          " — a 3×3 kernel only sees its neighbors, and you stack layers to slowly grow the receptive field. ",
+          " — a 3×3 kernel only sees its immediate neighbors, and you stack layers to slowly grow the ",
+          TQ.el("em", { text: "receptive field" }), " (how far a layer can \"see\"). ",
           "Language doesn't respect locality: in ",
           TQ.el("em", { text: "\"the cat that the dog chased sat on the mat,\"" }),
           " the word that binds ", TQ.el("strong", { text: "sat" }), " to its subject is ",
@@ -109,7 +110,8 @@
           " is the transformer's answer: a layer where every token can pull information directly from every ",
           "other token in ", TQ.el("strong", { text: "one hop" }),
           " — and, crucially, it ", TQ.el("em", { text: "learns which ones matter" }),
-          " instead of using a fixed stencil. No fixed receptive field, no recurrence: just learned, ",
+          " instead of using a fixed stencil. No fixed receptive field, no recurrence ",
+          "(processing tokens one-after-another like an RNN): just learned, ",
           "content-dependent routing of information."
         )
       ));
@@ -133,9 +135,11 @@
           " Key gets a relevance score and the answer is a blend of all the Values weighted by those scores."
         ),
         TQ.callout(
-          "Why \"differentiable\"? A hard hash-map lookup (argmax) has zero gradient almost everywhere, so it " +
-          "can't be trained by gradient descent. A softmax blend has gradient everywhere — that's the whole " +
-          "reason attention is learnable end-to-end."
+          "Why \"differentiable\"? (Optional aside, if you've met training before.) A gradient is the slope the " +
+          "network follows to improve a little at a time. A hard hash-map lookup (argmax = just pick the single " +
+          "highest, a flat all-or-nothing choice) has no slope to follow, so it can't be trained by gradient " +
+          "descent. A softmax blend changes smoothly as the weights shift — there's always a slope — which is " +
+          "the whole reason attention is learnable end-to-end."
         ),
         TQ.note(
           "Q/K/V here are real: each is the toy embedding matrix times a distinct projection " +
@@ -562,6 +566,106 @@
         )
       ));
 
+      /* ----------------------- shape pipeline figure + PyTorch ----------------------- */
+      // The interactive canvas/bench teach the CONCEPT; neither shows the
+      // dimension bookkeeping (d_model=16 -> d_k=8) nor the (n x n) attention
+      // matrix. This static figure + code make those shapes explicit, right
+      // where the four formulas above are defined. Static SVG, theme via CSS vars.
+      var codeBlock = TQ.block(
+        TQ.h(2, "The same four steps as PyTorch — and their shapes"),
+        TQ.p(
+          "Project → Score → Normalize → Blend is just four lines of tensor code. The diagram tracks the ",
+          "shapes as they flow: the embeddings (", TQ.math("n × d_model"), ") become ",
+          TQ.math("Q, K, V"), " (", TQ.math("n × d_k"), "), the queries-dotted-with-keys make an ",
+          TQ.math("n × n"), " grid of scores, softmax keeps that shape, and the final blend lands back at ",
+          TQ.math("n × d_k"), "."
+        )
+      );
+
+      codeBlock.appendChild(TQ.figure(
+        '<svg viewBox="0 0 720 132" width="720" height="132" role="img" ' +
+          'aria-label="Shape pipeline: x is n by d_model, projected to Q K V at n by d_k, ' +
+          'scored to an n by n grid, softmaxed, then blended back to n by d_k" ' +
+          'font-family="var(--mono)" font-size="13">' +
+          '<defs><marker id="tq-l2-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // box 1: x
+          '<rect x="8" y="46" width="96" height="40" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="56" y="64" text-anchor="middle" fill="var(--ink)">x</text>' +
+          '<text x="56" y="79" text-anchor="middle" fill="var(--ink-mute)" font-size="11">n × d_model</text>' +
+          // box 2: Q,K,V
+          '<rect x="176" y="46" width="104" height="40" rx="7" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+          '<text x="228" y="64" text-anchor="middle" fill="var(--accent)">Q, K, V</text>' +
+          '<text x="228" y="79" text-anchor="middle" fill="var(--ink-mute)" font-size="11">n × d_k</text>' +
+          // box 3: scores
+          '<rect x="352" y="46" width="104" height="40" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="404" y="64" text-anchor="middle" fill="var(--ink)">scores</text>' +
+          '<text x="404" y="79" text-anchor="middle" fill="var(--ink-mute)" font-size="11">n × n</text>' +
+          // box 4: weights
+          '<rect x="528" y="46" width="104" height="40" rx="7" fill="var(--panel-hi)" stroke="var(--cool)"/>' +
+          '<text x="580" y="64" text-anchor="middle" fill="var(--cool)">weights</text>' +
+          '<text x="580" y="79" text-anchor="middle" fill="var(--ink-mute)" font-size="11">n × n</text>' +
+          // arrows along the top row
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="106" y1="66" x2="174" y2="66" marker-end="url(#tq-l2-arrow)"/>' +
+            '<line x1="282" y1="66" x2="350" y2="66" marker-end="url(#tq-l2-arrow)"/>' +
+            '<line x1="458" y1="66" x2="526" y2="66" marker-end="url(#tq-l2-arrow)"/>' +
+          '</g>' +
+          // arrow labels
+          '<text x="140" y="40" text-anchor="middle" fill="var(--ink-faint)" font-size="10">project</text>' +
+          '<text x="140" y="56" text-anchor="middle" fill="var(--ink-faint)" font-size="10">Wq/Wk/Wv</text>' +
+          '<text x="316" y="40" text-anchor="middle" fill="var(--ink-faint)" font-size="10">score</text>' +
+          '<text x="316" y="56" text-anchor="middle" fill="var(--ink-faint)" font-size="10">Q @ K.T</text>' +
+          '<text x="492" y="40" text-anchor="middle" fill="var(--ink-faint)" font-size="10">softmax</text>' +
+          '<text x="492" y="56" text-anchor="middle" fill="var(--ink-faint)" font-size="10">each row</text>' +
+          // blend arrow down-right to out box
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<path d="M580 88 L580 110 L636 110" marker-end="url(#tq-l2-arrow)"/>' +
+          '</g>' +
+          '<text x="600" y="106" text-anchor="middle" fill="var(--ink-faint)" font-size="10">blend (@V)</text>' +
+          // out box
+          '<rect x="640" y="94" width="76" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--good)"/>' +
+          '<text x="678" y="110" text-anchor="middle" fill="var(--good)" font-size="12">out</text>' +
+          '<text x="678" y="123" text-anchor="middle" fill="var(--ink-mute)" font-size="10">n × d_k</text>' +
+        '</svg>',
+        "Shapes flowing through one attention lookup: project the embeddings to Q/K/V, " +
+        "dot every query with every key to fill an n × n score grid, softmax each row, " +
+        "then blend the Values back to n × d_k."
+      ));
+
+      // Minimal, correct PyTorch for ONE attention lookup. Mirrors the four
+      // formulas above (project / score / softmax / blend). No /sqrt(dk) here —
+      // that arrives in Level 3 (noted inline).
+      codeBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "\n" +
+        "# x: the token embeddings from Level 1 -> shape (seq_len, d_model)\n" +
+        "x = torch.randn(6, 16)            # 6 tokens, 16-dim embeddings\n" +
+        "\n" +
+        "# 1. PROJECT: one linear map each turns every embedding into Q, K, V\n" +
+        "d_k = 8\n" +
+        "W_q, W_k, W_v = (nn.Linear(16, d_k, bias=False) for _ in range(3))\n" +
+        "Q, K, V = W_q(x), W_k(x), W_v(x)  # each (6, 8): one role-vector per token\n" +
+        "\n" +
+        "# 2. SCORE: every Query dotted with every Key -> a (6, 6) grid of relevances\n" +
+        "scores = Q @ K.T                  # scores[i, j] = Q[i] . K[j]\n" +
+        "# (Level 3 will divide these by sqrt(d_k) for stability; we skip it here.)\n" +
+        "\n" +
+        "# 3. NORMALIZE: softmax each row -> positive weights that sum to 1\n" +
+        "weights = scores.softmax(dim=-1)  # (6, 6), each row sums to 1.0\n" +
+        "\n" +
+        "# 4. BLEND: weighted average of the Value vectors\n" +
+        "out = weights @ V                 # (6, 8): each row is a soft mix of all V's\n" +
+        "print(out.shape)                  # torch.Size([6, 8])\n",
+        { lang: "python", label: "one attention lookup",
+          caption: "out is a soft weighted average of V — never a hard pick of one row. " +
+            "Those four lines are exactly the Project → Score → Normalize → Blend story above." }
+      ));
+
+      root.appendChild(codeBlock);
+
       /* ============================================================= *
        *  PRIMARY INTERACTIVE — the soft database lookup bench
        * ============================================================= */
@@ -830,7 +934,21 @@
         TQ.callout(
           "Next level: we add the missing /√dk scaling and stack several of these lookups in parallel " +
           "(multi-head). Same lookup, run many times with different projections."
-        )
+        ),
+        TQ.resources("Go deeper", [
+          { label: "The Illustrated Transformer", kind: "blog",
+            url: "https://jalammar.github.io/illustrated-transformer/",
+            note: "Jay Alammar's visual walk through Q/K/V and self-attention" },
+          { label: "3Blue1Brown — Attention in transformers, visually explained", kind: "video",
+            url: "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+            note: "geometric intuition for the dot-product scoring" },
+          { label: "Andrej Karpathy — Let's build GPT from scratch", kind: "video",
+            url: "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+            note: "codes a single attention head live, step by step" },
+          { label: "Attention Is All You Need (the original paper)", kind: "paper",
+            url: "https://arxiv.org/abs/1706.03762",
+            note: "where scaled dot-product attention was introduced" }
+        ])
       ));
 
       /* scoped styles for this level — colors only via CSS variables, never hex */

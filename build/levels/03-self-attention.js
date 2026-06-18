@@ -55,7 +55,8 @@
           "against its own neighbors, not some other input. The output for each token is a content-weighted ",
           "blend of every token's Value, where the weights are recomputed on the fly from how well that token's ",
           "Query aligns with every Key. No fixed kernel; the mixing weights come from the data every forward pass. ",
-          "That data-dependent routing is why transformers eat long-range dependencies for breakfast where a CNN ",
+          "That data-dependent routing is why transformers eat long-range dependencies for breakfast (a ",
+          "long-range dependency = a token needing information from a far-away token) where a CNN ",
           "needed many stacked layers to see across an image."
         )
       ));
@@ -68,10 +69,11 @@
           " is the raw dot product of token i's Query with token j's Key — the same un-normalized alignment ",
           "you computed by hand in Level 1, but now between learned projections. Big dot product = strong match ",
           "= token i wants j's Value. Then divide every score by ", TQ.math("√dk"),
-          " (the temperature fix, next block). Then ", TQ.el("strong", { text: "softmax" }),
+          " (the temperature fix — temperature = how peaked vs flat the softmax comes out — next block). Then ", TQ.el("strong", { text: "softmax" }),
           " runs across each ROW, turning scores into a probability distribution that sums to 1.0 — the ",
           "attention weights. Finally multiply that weight matrix by ", TQ.math("V"),
-          ", so each token's output is a convex combination of all Values, dominated by the tokens it scored highest against."
+          ", so each token's output is a convex combination (a weighted average whose weights sum to 1) of all Values, ",
+          "dominated by the tokens it scored highest against."
         ),
         TQ.callout(
           "Nothing magic — three matmuls, one scale, one softmax. The lab below runs exactly this pipeline on the " +
@@ -92,7 +94,8 @@
           "Now feed those into softmax. Softmax is exponential, so it's brutally sensitive to the ",
           TQ.el("strong", { text: "spread" }), " of its inputs: when scores are large and spread out, ",
           TQ.math("exp()"), " makes the biggest one swamp the rest and the distribution collapses toward one-hot. ",
-          "You know exactly why that's poison — softmax in its saturated regime has gradients near zero (the same ",
+          "You know exactly why that's poison — softmax in its saturated regime (output so close to one-hot that its ",
+          "slope, i.e. gradient, is ~0) has gradients near zero (the same ",
           "vanishing-gradient flatness you fought with saturated sigmoids), so the model can barely learn which ",
           "token to attend to. Dividing by ", TQ.math("√dk"), " cancels the dimension-induced inflation, holding ",
           "the score variance ~constant regardless of head size, keeping softmax in its smooth, high-gradient regime. ",
@@ -444,6 +447,32 @@
         "convex combination of Values: a token can amplify or ignore neighbors, but never invents signal outside the Value set."
       ));
 
+      // Minimal, runnable-style PyTorch mirroring the lab pipeline exactly:
+      // QKᵀ -> /√dk -> optional causal mask (−∞ before softmax) -> softmax row -> @V.
+      // One head, no nn.Module / batching boilerplate — exactly the 6×6 single-head visual.
+      lab.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn.functional as F\n" +
+        "import math\n" +
+        "\n" +
+        "def self_attention(Q, K, V, causal=False):\n" +
+        "    # Q, K, V: (seq_len, d_k) — one head, like the 6x6 lab above\n" +
+        "    d_k = Q.size(-1)\n" +
+        "    # stage 1: raw scores S[i,j] = q_i . k_j   (the QK^T heatmap)\n" +
+        "    scores = (Q @ K.transpose(-2, -1)) / math.sqrt(d_k)  # stage 2: the /sqrt(d_k) scaling\n" +
+        "    if causal:\n" +
+        "        # block future keys j > i: set them to -inf BEFORE softmax\n" +
+        "        mask = torch.triu(torch.ones_like(scores), diagonal=1).bool()\n" +
+        "        scores = scores.masked_fill(mask, float('-inf'))    # exp(-inf) = 0\n" +
+        "    # stage 3: softmax across each ROW -> attention weights (each row sums to 1.0)\n" +
+        "    weights = F.softmax(scores, dim=-1)\n" +
+        "    # blend Values: a convex combination of every token's V\n" +
+        "    return weights @ V, weights\n",
+        { lang: "python",
+          label: "scaled dot-product self-attention (1 head)",
+          caption: "Mirrors the lab: QK^T, /sqrt(d_k), optional causal mask -inf before softmax, then @V." }
+      ));
+
       // first paint
       refresh();
       root.appendChild(lab);
@@ -467,6 +496,34 @@
           "the mechanism and there as why it costs nothing to enforce."
         )
       ));
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — self-attention & scaling", [
+        {
+          label: "The Annotated Transformer",
+          url: "https://nlp.seas.harvard.edu/annotated-transformer/",
+          kind: "code",
+          note: "Harvard's line-by-line PyTorch walkthrough — the same scaled dot-product attention you just coded, in context."
+        },
+        {
+          label: "The Illustrated Transformer",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          kind: "blog",
+          note: "Jay Alammar's visual tour of Q/K/V, scoring, and softmax — the pictures behind this lab."
+        },
+        {
+          label: "Attention Is All You Need",
+          url: "https://arxiv.org/abs/1706.03762",
+          kind: "paper",
+          note: "The original paper that introduced softmax(QKᵀ/√dk)·V and the √dk scaling motivation."
+        },
+        {
+          label: "3Blue1Brown — Attention, visually explained",
+          url: "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+          kind: "video",
+          note: "A geometric, animated build of exactly the attention mechanism you turned the knobs on here."
+        }
+      ]));
 
       /* small scoped styles (colors via CSS variables only — no hardcoded hex) */
       injectOnce("tq-lvl03-css",

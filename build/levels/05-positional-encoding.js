@@ -32,7 +32,7 @@
     tagline: "Attention is order-blind by default — give it a sense of position.",
     preread: "Illustrated Transformer / Basics",
     objectives: [
-      "Understand self-attention is permutation-invariant (no built-in order)",
+      "Understand self-attention is permutation-equivariant (no built-in order): shuffle the inputs and the outputs just shuffle the same way",
       "Read a sinusoidal PE matrix: positions × dimensions, low dims high-frequency, high dims low-frequency",
       "See that adding PE to an embedding changes the vector, and swapping two words changes their encodings"
     ],
@@ -48,6 +48,7 @@
       root.appendChild(TQ.block(
         TQ.h(2, "Attention is a set operation, not a sequence operation"),
         TQ.p(
+          TQ.el("em", { text: "(A set has no order — {cat, sat} is the same as {sat, cat}; a sequence does.) " }),
           "Here's the unsettling fact your CNN intuition won't prepare you for: self-attention has ",
           TQ.el("strong", { text: "no idea what order the tokens are in" }), ". A convolution is hard-wired ",
           "to position — a 3×3 kernel literally reads \"the pixel above-left, above, above-right.\" Locality and ",
@@ -58,6 +59,7 @@
         ),
         TQ.p(
           "Formally, attention is ", TQ.el("strong", { text: "permutation-equivariant" }),
+          " (shuffle the inputs and the outputs just shuffle the same way, nothing else changes)",
           ": permute the input rows and you get the exact same outputs, just permuted the same way. An ",
           "unmoved token's output vector is bit-for-bit identical whether the rest of the sentence is in order ",
           "or shuffled. \"The cat sat on the mat\" and \"mat the on sat cat The\" produce the same bag of ",
@@ -92,23 +94,62 @@
           ". Read the matrix as positions (rows) × dimensions (columns), where columns pair up ",
           "(0,1),(2,3),… each pair sharing one frequency. Low columns spin fast — column 0 is ",
           TQ.math("sin(pos/1)"), ", a full cycle every ~6 positions — and high columns spin glacially, ",
-          "barely moving across a short sentence. It's a binary-counter-as-waves: fast bits flip every step, ",
-          "slow bits encode coarse position."
+          "barely moving across a short sentence. It's a binary-counter-as-waves: fast (low) dimensions are the ",
+          "ones digit that flips every step, slow (high) dimensions are the high digits that encode coarse position."
         ),
         TQ.p(
           "Two payoffs. (1) It's deterministic and unbounded — position 5000 gets a clean code even if you ",
-          "never trained past 512, so it ", TQ.el("strong", { text: "extrapolates" }), ". (2) The relative ",
-          "offset between two positions is a fixed linear (rotation) function of their PEs, which lets attention ",
-          "learn \"attend 3 tokens back\" as a single pattern — ",
+          "never trained past 512, so it ", TQ.el("strong", { text: "extrapolates" }), ". (2) The gap between two ",
+          "positions always produces the same similarity — so the model can learn \"look k tokens back\" once and ",
+          "reuse it everywhere. (Mathematically, the relative offset is a fixed linear/rotation function of the PEs.) ",
+          "This lets attention learn \"attend 3 tokens back\" as a single pattern — ",
           TQ.el("strong", { text: "see Panel D" }), ", where you slide the absolute position and watch the ",
           "similarity refuse to move."
         ),
         TQ.callout(
-          "This is the fixed, hand-designed scheme. Modern models often skip it for RoPE, which rotates Q and K " +
+          "(Preview — fully covered in L9, nothing to memorize now.) This is the fixed, hand-designed scheme. " +
+          "Modern models often skip it for RoPE, which rotates Q and K " +
           "by position-dependent angles instead of adding anything — and RoPE comes back to bite us in the MLA " +
           "level, where DeepSeek has to carve out a \"decoupled\" RoPE key because rotation doesn't play nicely " +
           "with their latent KV compression."
         )
+      ));
+
+      /* ------- orienting diagram: WHERE PE enters the pipeline (static SVG) ----- */
+      // Panels A-D all zoom INTO PE; none show the embedding -> (+PE) -> attention
+      // dataflow the Takeaway ("input = meaning + position") depends on. Colors via
+      // CSS vars / currentColor only — inherits the dark theme.
+      root.appendChild(TQ.figure(
+        '<svg viewBox="0 0 560 140" width="560" height="140" role="img" ' +
+          'aria-label="Positional encoding is added onto token embeddings before the first attention block" ' +
+          'font-family="var(--mono)" font-size="13">' +
+          '<defs><marker id="tq-l5-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // stage 1: token embeddings
+          '<text x="74" y="34" text-anchor="middle" fill="var(--ink-mute)" font-size="11">token embeddings</text>' +
+          '<rect x="14" y="44" width="120" height="38" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="74" y="68" text-anchor="middle" fill="var(--ink)">embed (n × d)</text>' +
+          // the (+) node
+          '<circle cx="280" cy="63" r="20" fill="var(--panel-hi)" stroke="var(--accent-2)"/>' +
+          '<text x="280" y="69" text-anchor="middle" fill="var(--accent-2)" font-size="20">+</text>' +
+          // stage 3: input to attention
+          '<text x="486" y="34" text-anchor="middle" fill="var(--ink-mute)" font-size="11">input to attention</text>' +
+          '<rect x="426" y="44" width="120" height="38" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="486" y="68" text-anchor="middle" fill="var(--ink)">input (n × d)</text>' +
+          // PE feeding the (+) from below
+          '<rect x="200" y="104" width="160" height="30" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="280" y="123" text-anchor="middle" fill="var(--accent)" font-size="12">PE(pos) — sinusoidal (n × d)</text>' +
+          // arrows
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="138" y1="63" x2="256" y2="63" marker-end="url(#tq-l5-arrow)"/>' +
+            '<line x1="304" y1="63" x2="422" y2="63" marker-end="url(#tq-l5-arrow)"/>' +
+            '<line x1="280" y1="100" x2="280" y2="87" marker-end="url(#tq-l5-arrow)"/>' +
+          '</g>' +
+          '<text x="280" y="34" text-anchor="middle" fill="var(--ink-faint)" font-size="10">elementwise add, d_model unchanged</text>' +
+        '</svg>',
+        "Positional encoding enters once, before the first attention block: each position's sinusoidal vector is " +
+        "added onto its token embedding. Same d_model in, same d_model out — it is added, not concatenated."
       ));
 
       /* ===================================================== PANEL A: PE map */
@@ -267,6 +308,32 @@
         "Drag dimension from 0 upward and the wave stretches out. Dim 0 completes a full cycle in ~6 positions; " +
         "by dim 14 the wavelength is ~19,000 positions, so it's essentially flat across one sentence. Low dims = " +
         "fine position, high dims = coarse position — together they pin down an exact slot, like bits of a counter."
+      ));
+      // Minimal, correct PyTorch that reproduces exactly the matrix drawn above —
+      // the same formula TQ.sinusoidalPE(n, d) implements, then added to embeddings.
+      panelA.appendChild(TQ.code(
+        "import torch, math\n" +
+        "\n" +
+        "def sinusoidal_pe(n_pos, d_model):\n" +
+        "    # PE[pos, 2i]   = sin(pos / 10000**(2i/d))\n" +
+        "    # PE[pos, 2i+1] = cos(pos / 10000**(2i/d))\n" +
+        "    pos = torch.arange(n_pos).unsqueeze(1)          # (n_pos, 1)\n" +
+        "    i   = torch.arange(0, d_model, 2)               # even indices 0,2,4,...\n" +
+        "    div = torch.pow(10000, i / d_model)             # one frequency per pair\n" +
+        "    pe = torch.zeros(n_pos, d_model)\n" +
+        "    pe[:, 0::2] = torch.sin(pos / div)              # even dims -> sin\n" +
+        "    pe[:, 1::2] = torch.cos(pos / div)              # odd dims  -> cos\n" +
+        "    return pe\n" +
+        "\n" +
+        "n_pos, d_model = 6, 16\n" +
+        "pe = sinusoidal_pe(n_pos, d_model)   # (6, 16) - exactly the heatmap in Panel A\n" +
+        "\n" +
+        "# add it onto the token embeddings (NOT concatenate): same d_model\n" +
+        "input_embeddings = token_embeddings + pe   # input = meaning + position\n",
+        { lang: "python", label: "sinusoidal positional encoding",
+          caption: "This is TQ.sinusoidalPE(n, d) with n = 6, d = 16 — the same peRows this level adds to the toy " +
+                   "embeddings. div = 10000**(2i/d) is the per-pair wavelength Panel A's slider sweeps. Note the last " +
+                   "line uses '+ pe' (not concat), which is why d_model stays 16." }
       ));
       refreshHeatA();
       refreshWaveInfo();
@@ -720,6 +787,40 @@
                    "Everything attention does downstream now has order to work with.")
       ));
 
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — positional encoding", [
+        {
+          label: "Kazemnejad — Transformer positional encoding",
+          url: "https://kazemnejad.com/blog/transformer_architecture_positional_encoding/",
+          kind: "blog",
+          note: "The clearest derivation of why sin/cos pairs make relative position fall out as a fixed rotation — Panel D, explained."
+        },
+        {
+          label: "The Annotated Transformer (PE in code)",
+          url: "https://nlp.seas.harvard.edu/annotated-transformer/",
+          kind: "code",
+          note: "Harvard's line-by-line PyTorch — its PositionalEncoding module is the real version of the Panel A snippet."
+        },
+        {
+          label: "Attention Is All You Need (original sinusoidal PE, §3.5)",
+          url: "https://arxiv.org/abs/1706.03762",
+          kind: "paper",
+          note: "The source. Section 3.5 introduces exactly the sin/cos formula this level plots."
+        },
+        {
+          label: "Illustrated Transformer — where PE fits in the stack",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          kind: "blog",
+          note: "Visual tour that shows the embedding + PE step sitting in front of the first attention block."
+        },
+        {
+          label: "RoFormer / RoPE — going deeper than additive PE",
+          url: "https://arxiv.org/abs/2104.09864",
+          kind: "paper",
+          note: "The rotary alternative previewed in the callouts; returns in the L9 (MLA) level."
+        }
+      ]));
+
       /* scoped styles (colors only via CSS vars / TQ.colorFor — no hardcoded hex) */
       injectOnce("tq-lvl05-css",
         ".tq-pe-arow{align-items:flex-start;gap:20px}" +
@@ -750,7 +851,8 @@
           "It changes only if the swapped words were adjacent"
         ],
         answer: 0,
-        explain: "Self-attention is permutation-equivariant: it's a content-weighted average over a set. An " +
+        explain: "Self-attention is permutation-equivariant (shuffle the inputs, the outputs just shuffle the same " +
+                 "way): it's a content-weighted average over a set. An " +
                  "unmoved token sees the same multiset of keys/values, so its output is identical. That " +
                  "order-blindness is exactly why PE is needed."
       },

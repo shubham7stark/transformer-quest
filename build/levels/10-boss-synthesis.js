@@ -55,7 +55,8 @@
           TQ.el("strong", { text: "vector" }), " (embedding). ",
           "Position gets stamped in (sinusoidal / RoPE) so order isn't lost. Each token projects to a ",
           TQ.el("strong", { text: "query, key, value" }), ". Attention scores every query against every key with a ",
-          "dot product, divides by ", TQ.math("√dk"), " so the softmax doesn't saturate, normalizes to weights, ",
+          "dot product, divides by ", TQ.math("√dk"), " so the softmax doesn't saturate (collapse all its " +
+          "weight onto one token), normalizes to weights, ",
           "and mixes the values — that's one head. Many heads run in parallel, each reading a different ",
           "relationship; their outputs concat and pass through ", TQ.math("Wo"), ". Wrap that in ",
           TQ.el("strong", { text: "residual + LayerNorm" }), ", add an FFN, stack the block N times, and predict ",
@@ -77,7 +78,56 @@
             );
           })
         ),
-        TQ.note("We trace token #1, \"cat\", through every stage so you watch one concrete vector move.")
+        TQ.note("We trace token #1, \"cat\", through every stage so you watch one concrete vector move."),
+        // Whole-map diagram: the full decoder-only skeleton at a glance — the
+        // stacked xN loop, final norm and lm_head that the click-through strip
+        // (which reveals stages one at a time and stops at KV cache) never shows
+        // in one view. Static SVG; theme colors only via CSS vars / currentColor.
+        TQ.figure(
+          '<svg viewBox="0 0 720 130" width="720" height="130" role="img" ' +
+            'aria-label="Whole decoder-only skeleton: tokens to embed plus position to N transformer blocks to final LayerNorm to lm_head to next-token probabilities" ' +
+            'font-family="var(--mono)" font-size="11">' +
+            '<defs><marker id="tq-l10-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+              'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+            // stage boxes
+            '<rect x="8" y="48" width="78" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="47" y="69" text-anchor="middle" fill="var(--ink)">tokens</text>' +
+            '<rect x="120" y="48" width="104" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="172" y="64" text-anchor="middle" fill="var(--ink)">embed</text>' +
+            '<text x="172" y="77" text-anchor="middle" fill="var(--ink-mute)" font-size="9">+ position</text>' +
+            // stacked block (xN) — drawn as offset rects to suggest depth
+            '<rect x="276" y="38" width="150" height="54" rx="9" fill="none" stroke="var(--line-soft)"/>' +
+            '<rect x="270" y="32" width="150" height="54" rx="9" fill="none" stroke="var(--line-soft)"/>' +
+            '<rect x="264" y="44" width="150" height="54" rx="9" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+            '<text x="339" y="64" text-anchor="middle" fill="var(--ink)">transformer block</text>' +
+            '<text x="339" y="78" text-anchor="middle" fill="var(--ink-mute)" font-size="9">attn + FFN, each residual+LN</text>' +
+            '<text x="339" y="26" text-anchor="middle" fill="var(--accent)" font-size="11">× N</text>' +
+            '<rect x="450" y="48" width="92" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="496" y="69" text-anchor="middle" fill="var(--ink)">final LN</text>' +
+            '<rect x="568" y="48" width="78" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="607" y="69" text-anchor="middle" fill="var(--ink)">lm_head</text>' +
+            // final probabilities glyph
+            '<g>' +
+              '<rect x="676" y="46" width="10" height="14" rx="2" fill="var(--accent)"/>' +
+              '<rect x="676" y="62" width="10" height="9" rx="2" fill="var(--cool)"/>' +
+              '<rect x="676" y="73" width="10" height="6" rx="2" fill="var(--info)"/>' +
+              '<text x="681" y="93" text-anchor="middle" fill="var(--ink-mute)" font-size="9">P(next)</text>' +
+            '</g>' +
+            // arrows
+            '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+              '<line x1="90" y1="65" x2="116" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+              '<line x1="228" y1="65" x2="260" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+              '<line x1="418" y1="65" x2="446" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+              '<line x1="546" y1="65" x2="564" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+              '<line x1="650" y1="65" x2="672" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+            '</g>' +
+          '</svg>',
+          "The whole decoder-only skeleton in one view: tokens → embed (+ positional encoding) → a " +
+          "transformer block (attention + FFN, each wrapped in residual + LayerNorm) stacked × N → a " +
+          "final LayerNorm → lm_head, producing next-token probabilities. The clickable strip below walks " +
+          "the stages one at a time; this map shows the stacked shape they live inside."
+        )
       ));
 
       /* ============================================================ *
@@ -196,9 +246,10 @@
               statChip("Σ weights", TQ.fmt(TQ.sum(weightsCat), 2))
             ));
             c.appendChild(TQ.callout(
-              "Why √dk exists: dot products of dk components have std ∝ √dk. Without the divide, big dk " +
-              "makes logits huge and softmax spikes to near one-hot — gradients vanish. Compare the two " +
-              "distributions below: UNscaled (left) is peakier than scaled (right)."
+              "Why √dk exists: dot products of dk components have std ∝ √dk, so bigger dk means bigger raw " +
+              "scores (logits). Without the divide, those scores get huge and the softmax spikes to near " +
+              "one-hot (all the weight on a single token, the rest ~0) — so gradients vanish and learning " +
+              "stalls. Compare the two distributions below: UNscaled (left) is peakier than scaled (right)."
             ));
             var cmp = TQ.el("div", { class: "tq-boss-cmp" },
               TQ.el("div", {},
@@ -238,8 +289,11 @@
           run: function (c) {
             c.appendChild(TQ.p(
               TQ.el("strong", { text: "What & why: " }),
-              "the sublayer output is added back to the input (residual), then normalized. Order is ",
-              TQ.el("strong", { text: "residual-THEN-LayerNorm" }), " (post-LN, as in the Illustrated Transformer). ",
+              "the sublayer output is added back to the input (the ", TQ.el("strong", { text: "residual" }),
+              ", ", TQ.math("x + sublayer"), " — keeping the original ", TQ.math("x"),
+              " gives gradients a clean shortcut so deep stacks still train), then normalized. Order is ",
+              TQ.el("strong", { text: "residual-THEN-LayerNorm" }),
+              " (\"post-LN\" means the norm comes after the residual add, as in the Illustrated Transformer). ",
               "We use the multi-head output for \"cat\" (already ", TQ.math("d_model=16"),
               ") so the residual add is dimension-clean."
             ));
@@ -325,6 +379,41 @@
       pipeBlock.appendChild(strip);
       pipeBlock.appendChild(detail);
       selectStage(0);
+
+      // The same stages as runnable-style PyTorch pseudocode, one-to-one with the
+      // strip above. Each comment names the level it came from so the skeleton
+      // literally ties the whole course together. Kept a skeleton (not training
+      // code) — the def blocks are what every stage you clicked adds up to.
+      pipeBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "import torch.nn.functional as F\n" +
+        "\n" +
+        "def block_forward(x, attn, ffn, ln1, ln2, kv_cache=None):\n" +
+        "    # one transformer block = residual + LayerNorm around (a) attention, (b) FFN\n" +
+        "    # attn does softmax(Q @ K.T / sqrt(dk)) @ V  (L3 scaling, L4 multi-head).\n" +
+        "    # MHA/MQA/GQA/MLA only change HOW K and V are stored/shared (L8/L9);\n" +
+        "    # kv_cache holds every past token's K and V so we don't recompute them (L7).\n" +
+        "    x = x + attn(ln1(x), kv_cache=kv_cache)   # causal self-attention sublayer\n" +
+        "    x = x + ffn(ln2(x))                       # position-wise feed-forward sublayer\n" +
+        "    return x\n" +
+        "\n" +
+        "def model_forward(token_ids, embed, pos_enc, blocks, ln_f, lm_head, kv=None):\n" +
+        "    x = embed(token_ids)                      # token -> vector lookup (L1)\n" +
+        "    x = pos_enc(x)                            # stamp in order: sinusoidal / RoPE (L5)\n" +
+        "    for i, block in enumerate(blocks):        # stack N transformer blocks\n" +
+        "        x = block_forward(x, *block, kv_cache=(kv[i] if kv else None))\n" +
+        "    x = ln_f(x)                              # final LayerNorm (L6)\n" +
+        "    logits = lm_head(x)                      # project to vocab: (seq, vocab)\n" +
+        "    return logits                            # softmax(logits[-1]) = next-token probs\n",
+        { lang: "python", label: "decoder-only forward",
+          caption: "The whole course as one forward pass: embed + position -> N blocks (attention + FFN, " +
+            "each residual + LayerNorm) -> final LayerNorm -> lm_head. Each comment names the level it came from. " +
+            "Note this skeleton norms BEFORE each sublayer (x + sublayer(ln(x))) — that's \"pre-LN\", the modern " +
+            "GPT/nanoGPT default, which is why a final ln_f is needed; the Block stage above shows the classic " +
+            "\"post-LN\" (norm after the residual add) from the original paper. Both are valid; production decoders use pre-LN." }
+      ));
+
       root.appendChild(pipeBlock);
 
       /* ========================================================== *
@@ -345,9 +434,10 @@
           TQ.el("strong", { text: "MQA / GQA" }), " attack memory by cutting ", TQ.math("n_kv_heads"),
           " (saving ", TQ.math("1 − n_kv/n_q"), ") while keeping all query heads for quality. ",
           TQ.el("strong", { text: "MLA" }), " goes further: it stops caching K and V directly and instead caches a ",
-          "small latent ", TQ.math("c"), " that both are reconstructed from — paying for it with a separate, ",
-          "decoupled RoPE key, because you can't bake rotary position into a compressed latent and still ",
-          "rebuild clean per-head keys."
+          "small latent ", TQ.math("c"), " — a compressed summary the keys and values are rebuilt from — ",
+          "paying for it with a separate, ",
+          "decoupled RoPE key (a tiny extra key that carries position), because you can't bake rotary position ",
+          "into a compressed latent and still rebuild clean per-head keys."
         )
       ));
 
@@ -509,6 +599,34 @@
           "shrinks the PER-TOKEN constant. MLA shrinks it the most while paying the least quality — that's why " +
           "it's the clever one. Now go ship something memory-efficient.")
       ));
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — build the whole thing yourself", [
+        {
+          label: "Andrej Karpathy — nanoGPT",
+          url: "https://github.com/karpathy/nanoGPT",
+          kind: "code",
+          note: "A tiny, readable decoder-only GPT in PyTorch — the real version of the model_forward skeleton above."
+        },
+        {
+          label: "Andrej Karpathy — Let's build GPT from scratch",
+          url: "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+          kind: "video",
+          note: "Builds the entire forward pass live, from embedding to lm_head — every stage in this level, in order."
+        },
+        {
+          label: "The Illustrated Transformer",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          kind: "blog",
+          note: "Jay Alammar's visual walkthrough of the whole stack — the picture this recap puts numbers on."
+        },
+        {
+          label: "Attention Is All You Need",
+          url: "https://arxiv.org/abs/1706.03762",
+          kind: "paper",
+          note: "The original paper that introduced scaled dot-product attention and the transformer block."
+        }
+      ]));
 
       /* scoped styles — colors only via CSS variables / colorFor, no hardcoded hex */
       injectOnce("tq-lvl10-css",

@@ -59,14 +59,16 @@
           TQ.el("strong", { text: "MLA asks a sharper question:" }),
           " why cache per-head K/V at all? Cache one small shared latent vector ",
           TQ.math("c"), " and reconstruct every head's K and V from it on the fly. ",
-          "You already know this move from your CV days — it's a ",
+          "The trick is a ",
           TQ.el("strong", { text: "low-rank factorization" }),
-          ". The full per-head K/V projection is a fat matrix; MLA factors it as ",
+          " — replace one big matrix with a skinny down-step then a skinny up-step, so you ",
+          "store far fewer numbers. (If you've seen SVD in your CV days, this is the same move.) ",
+          "The full per-head K/V projection is a fat matrix; MLA factors it as ",
           "“squeeze down to ", TQ.math("d_c"), ", then expand back up.” ",
           "You store only the squeezed thing."
         ),
         TQ.callout([
-          "Bridge from SVD: replacing a fat projection with down-then-up (rank ",
+          "Bonus aside if you know SVD: replacing a fat projection with down-then-up (rank ",
           TQ.math("d_c"), ") is exactly rank-k truncation. The latent ", TQ.math("c"),
           " is the compressed code; the up-projections are the basis that re-expands it."
         ])
@@ -75,12 +77,12 @@
       /* ============================================================== *
        *  NARRATIVE BLOCK 2 — down/up projection
        * ============================================================== */
-      root.appendChild(TQ.block(
+      var downUpBlock = TQ.block(
         TQ.h(2, "Down-project to cache, up-project to use"),
         TQ.p(
           "Each token's embedding ", TQ.math("h"), " is multiplied by a down-projection ",
           TQ.math("W_DKV"), " to produce a latent ", TQ.math("c"), " of dimension ",
-          TQ.math("d_c"), " — small (think 512 when the full K/V across all heads would be ~16k). ",
+          TQ.math("d_c"), " (", TQ.math("d_c"), " = the latent size) — small (think 512 when the full K/V across all heads would be ~16k). ",
           TQ.math("c"), " is the ", TQ.el("strong", { text: "only" }),
           " thing written to the cache (plus the rope key below)."
         ),
@@ -94,7 +96,44 @@
           "why MLA can match MHA quality (the up-projection lets each head recover a rich, ",
           "distinct K/V) while caching less than even GQA."
         )
+      );
+
+      // Conceptual-but-correct PyTorch sketch of the MLA forward path. Same
+      // down -> cache -> up arc the stepper below animates; toy names match the
+      // prose (W_DKV, W_UK, W_UV, c, k_rope). Explicit up-projection shown for
+      // clarity, with a one-line note on the W_Q' absorption trick (Block 3).
+      downUpBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "\n" +
+        "# Toy dims. d_c = latent size; d_rope = size of the little position key.\n" +
+        "d_model, n_heads, head_dim, d_c, d_rope = 4096, 32, 128, 512, 64\n" +
+        "\n" +
+        "# Projections (fixed model weights — they live in the model, NOT the cache).\n" +
+        "W_DKV = nn.Linear(d_model, d_c, bias=False)            # down-project h -> latent\n" +
+        "W_UK  = nn.Linear(d_c, n_heads * head_dim, bias=False) # up-project latent -> per-head K\n" +
+        "W_UV  = nn.Linear(d_c, n_heads * head_dim, bias=False) # up-project latent -> per-head V\n" +
+        "W_KR  = nn.Linear(d_model, d_rope, bias=False)         # decoupled RoPE key\n" +
+        "\n" +
+        "def cache_token(h):\n" +
+        "    # h: (d_model,) hidden for one token.\n" +
+        "    c_KV   = W_DKV(h)               # (d_c,)    <- the ONLY content cached\n" +
+        "    k_rope = apply_rope(W_KR(h))    # (d_rope,) <- tiny position key, cached as-is\n" +
+        "    return c_KV, k_rope             # cache holds just d_c + d_rope numbers\n" +
+        "\n" +
+        "def use_token(c_KV, k_rope):\n" +
+        "    # At attention time, rebuild rich per-head K, V from the cached latent.\n" +
+        "    K = W_UK(c_KV).view(n_heads, head_dim)   # content key per head = c . W_UK_i\n" +
+        "    V = W_UV(c_KV).view(n_heads, head_dim)   # value     per head = c . W_UV_i\n" +
+        "    # Final key per head = concat(content part, the shared decoupled rope key).\n" +
+        "    # score_i = content(K_i) + rope(k_rope); both halves add up.\n" +
+        "    # Absorption trick (Block 3): fold W_Q' = W_Q @ W_UK^T so the query dots\n" +
+        "    # c_KV directly -> K_i need not be materialized at decode. Shown explicit here.\n" +
+        "    return K, V\n",
+        { lang: "python", label: "MLA: down-project, cache, up-project",
+          caption: "This is the same down -> cache -> up path the stepper animates; c_KV is what the cache calculator's MLA bar measures." }
       ));
+      root.appendChild(downUpBlock);
 
       /* ============================================================== *
        *  NARRATIVE BLOCK 3 — decoupled RoPE
@@ -102,13 +141,21 @@
       root.appendChild(TQ.block(
         TQ.h(2, "Why RoPE has to ride alongside (the decoupled key)"),
         TQ.p(
+          TQ.el("strong", { text: "Takeaway first: " }),
+          "RoPE's rotation depends on each token's position, so it can't be folded into the fixed ",
+          "weights the way the rest of MLA can — that's why position gets its own little cached key ",
+          "(here \"decoupled\" just means ", TQ.el("em", { text: "kept separate from the compressed latent" }),
+          "). The rest of this block is the deeper ", TQ.el("em", { text: "why" }), "."
+        ),
+        TQ.p(
           "Here's the subtle bug MLA designs around. ", TQ.el("strong", { text: "RoPE" }),
           " (the rotary position trick from L5) rotates each key by an angle that depends on ",
           "the token's absolute position ", TQ.el("em", { text: "before" }),
           " the dot product — so ", TQ.math("q·k"), " ends up depending only on relative distance. ",
           "If you bake RoPE into the cached latent, the rotation is frozen at cache-time and you can ",
           "no longer absorb the up-projection ", TQ.math("W_UK"),
-          " into the query side; the position math and the low-rank math fight."
+          " into the query side; the position math and the low-rank math fight — concretely, the ",
+          "per-position rotation can't be pre-folded into one fixed query weight, so position needs its own key."
         ),
         TQ.p(
           "Make that 'absorb' concrete. The content score is ", TQ.math("q · K_iᵀ = (x·W_Q) · (c·W_UK)ᵀ"),
@@ -128,6 +175,7 @@
           " part comes from the latent ", TQ.math("c"),
           " (no position, fully compressible). A small ", TQ.el("strong", { text: "separate" }),
           " rope key ", TQ.math("k_rope"), " of dimension ", TQ.math("d_rope"),
+          " (", TQ.math("d_rope"), " = the size of the little position key) ",
           " carries the rotary position info and is cached as-is beside ", TQ.math("c"),
           ". The query gets a matching rope part. Final score = (content from latent) + (rope part). ",
           "You cache ", TQ.math("d_c + d_rope"),
@@ -149,6 +197,53 @@
           " back out to full per-head K/V at use time — no head merged away."
         )
       );
+      // One-glance map of the whole down -> [cache] -> up arc (and where RoPE
+      // branches off) BEFORE the step-by-step stepper reveals it one click at a
+      // time. CACHE bracket = the narrow waist (var(--accent)); k_rope dashed in
+      // var(--info) to match the ropecol's dashed info-colored treatment.
+      animBlock.appendChild(TQ.figure(
+        '<svg viewBox="0 0 560 190" width="560" height="190" role="img" ' +
+          'aria-label="MLA pipeline: hidden h down-projects to a small cached latent c plus a tiny rope key, then up-projects to per-head K and V" ' +
+          'font-family="var(--mono)" font-size="12">' +
+          '<defs><marker id="tq-l9-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // stage 1: hidden h (tall box)
+          '<text x="46" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">hidden h</text>' +
+          '<rect x="22" y="30" width="48" height="130" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="46" y="100" text-anchor="middle" fill="var(--ink-soft)">d_model</text>' +
+          // arrow down-project
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="74" y1="80" x2="146" y2="80" marker-end="url(#tq-l9-arrow)"/></g>' +
+          '<text x="110" y="72" text-anchor="middle" fill="var(--ink-faint)" font-size="10">W_DKV</text>' +
+          // CACHE bracket containing latent c (short) + k_rope (tiny dashed)
+          '<rect x="150" y="20" width="118" height="150" rx="9" fill="none" ' +
+            'stroke="var(--accent)" stroke-width="1.5"/>' +
+          '<text x="209" y="14" text-anchor="middle" fill="var(--accent)" font-size="11">CACHE (narrow waist)</text>' +
+          '<rect x="166" y="48" width="44" height="62" rx="6" fill="var(--panel-hi)" ' +
+            'stroke="var(--accent)" stroke-width="1.5"/>' +
+          '<text x="188" y="83" text-anchor="middle" fill="var(--ink)">c · d_c</text>' +
+          '<rect x="166" y="124" width="86" height="30" rx="6" fill="none" ' +
+            'stroke="var(--info)" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+          '<text x="209" y="143" text-anchor="middle" fill="var(--info)" font-size="11">k_rope · d_rope</text>' +
+          // arrow up-project (fan out)
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="270" y1="80" x2="342" y2="80" marker-end="url(#tq-l9-arrow)"/></g>' +
+          '<text x="306" y="72" text-anchor="middle" fill="var(--ink-faint)" font-size="10">W_UK / W_UV</text>' +
+          // stage 3: per-head K,V fan-out (several short boxes)
+          '<text x="450" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">per-head K, V</text>' +
+          '<g fill="var(--panel-hi)" stroke="var(--line)">' +
+            '<rect x="352" y="34" width="180" height="20" rx="5"/>' +
+            '<rect x="352" y="60" width="180" height="20" rx="5"/>' +
+            '<rect x="352" y="86" width="180" height="20" rx="5"/>' +
+            '<rect x="352" y="112" width="180" height="20" rx="5"/>' +
+            '<rect x="352" y="138" width="180" height="20" rx="5"/>' +
+          '</g>' +
+          '<text x="442" y="100" text-anchor="middle" fill="var(--ink-soft)" font-size="10">n_heads × head_dim (rebuilt on the fly)</text>' +
+        '</svg>',
+        "The narrow waist: only the small latent c (+ a tiny rope key) is cached; per-head K/V are rebuilt from it on the fly."
+      ));
+
       var legend = TQ.el("div", { class: "tq-legend" },
         TQ.el("span", { text: "low" }),
         TQ.el("div", { class: "tq-legend-scale" }),
@@ -448,6 +543,42 @@
       ));
       rebuild();
       root.appendChild(calcBlock);
+
+      /* ============================================================== *
+       *  GO DEEPER (resources)
+       * ============================================================== */
+      root.appendChild(TQ.resources("Go deeper — MLA & the KV-cache family", [
+        {
+          label: "DeepSeek-V2 — introduces Multi-head Latent Attention",
+          url: "https://arxiv.org/abs/2405.04434",
+          kind: "paper",
+          note: "The paper that proposes MLA: the down/up-projection and the decoupled RoPE key you just stepped through."
+        },
+        {
+          label: "DeepSeek-V3",
+          url: "https://arxiv.org/abs/2412.19437",
+          kind: "paper",
+          note: "MLA at scale in a frontier model — the production payoff of this design."
+        },
+        {
+          label: "GQA — Grouped-Query Attention",
+          url: "https://arxiv.org/abs/2305.13245",
+          kind: "paper",
+          note: "The baseline MLA beats: heads share K/V to shrink the cache (a real quality hit)."
+        },
+        {
+          label: "Fast Transformer Decoding — Multi-Query Attention",
+          url: "https://arxiv.org/abs/1911.02150",
+          kind: "paper",
+          note: "MQA, the extreme of head-sharing — lowest cache but biggest expressivity cost."
+        },
+        {
+          label: "RoFormer / RoPE",
+          url: "https://arxiv.org/abs/2104.09864",
+          kind: "paper",
+          note: "The rotary positional trick whose position-dependent rotation forces MLA's decoupled rope key."
+        }
+      ]));
 
       /* ============================================================== *
        *  WRAP-UP

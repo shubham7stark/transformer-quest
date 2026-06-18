@@ -97,6 +97,25 @@
  *  TQ.badge(text,kind)       small pill label; kind in {default,good,warn,info}
  *  TQ.kv(label,value)        a small label:value stat chip
  *
+ * ---- content helpers: CODE / LINKS / DIAGRAMS (use in every level) --------
+ *  TQ.code(src, opts)        -> node. A styled <pre><code> block with a small
+ *                            language chip. opts = {lang:"python"(default)|"text",
+ *                            caption, label}. Minimal, robust python syntax
+ *                            highlighting (HTML-escaped first; never corrupts
+ *                            code). Indentation/newlines preserved exactly.
+ *                            e.g. TQ.code("x = nn.Embedding(50257, 16)\n", {lang:"python", caption:"lookup"})
+ *  TQ.resources(title,items) -> node. A "Go deeper" card: heading + list of
+ *                            external links. items = [{label,url,
+ *                            kind:"paper"|"blog"|"video"|"doc"|"code"|"interactive",
+ *                            note?}]. Each link opens in a NEW TAB (target=_blank
+ *                            rel=noopener), tagged with a kind emoji + bare domain.
+ *                            e.g. TQ.resources("Go deeper", [{label:"Illustrated Word2Vec", url:"https://jalammar.github.io/illustrated-word2vec/", kind:"blog"}])
+ *  TQ.figure(svgMarkup, caption) -> node. Centers a static inline SVG string
+ *                            (set via innerHTML) in a bordered figure with a
+ *                            caption. SVG should use currentColor / CSS vars so
+ *                            it inherits the theme.
+ *                            e.g. TQ.figure('<svg viewBox="0 0 100 20">…</svg>', "text → ids → vectors")
+ *
  * ============================================================================
  * GAME ENGINE
  * ----------------------------------------------------------------------------
@@ -574,6 +593,156 @@
       TQ.el("span", { class: "tq-kv-label", text: label }),
       TQ.el("span", { class: "tq-kv-val", text: value })
     );
+  };
+
+  /* ------------------------------------------------------------------ *
+   *  CONTENT HELPERS — CODE / LINKS / DIAGRAMS
+   *  Reusable across every level so CODE, external LINKS, and small static
+   *  DIAGRAMS all share one look. CODE highlighting operates on ESCAPED text
+   *  and is deliberately minimal so it can never corrupt the source.
+   * ------------------------------------------------------------------ */
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  // Minimal, ROBUST python highlighter. Strategy: HTML-escape the whole source
+  // FIRST, then run a SINGLE pass with one combined regex whose alternatives are
+  // tried in priority order (comments, then strings, then keyword/builtin/bool
+  // words, then numbers). Because we only ever wrap whole matched runs of the
+  // already-escaped text in <span> tags — and never re-scan inside a wrap — a
+  // token can never be split or nested, so the output is always valid and the
+  // code reads back identically (tags stripped == original escaped source).
+  var PY_KEYWORDS = { "def":1,"return":1,"for":1,"in":1,"if":1,"else":1,"import":1,
+    "from":1,"class":1,"with":1,"as":1,"lambda":1 };
+  var PY_BOOL = { "None":1,"True":1,"False":1 };
+  var PY_BUILTINS = { "range":1,"len":1,"print":1 };
+
+  // Order matters: strings/comments first so a # or keyword INSIDE a string is
+  // not separately highlighted. Operates on escaped text, so quotes are literal
+  // quote chars (we escaped only & < >, leaving ' and " intact).
+  var PY_RE = new RegExp(
+    "(#[^\\n]*)" +                          // 1: comment to end of line
+    "|(\"(?:[^\"\\\\\\n]|\\\\.)*\"|'(?:[^'\\\\\\n]|\\\\.)*')" + // 2: string
+    "|\\b(\\d+(?:\\.\\d+)?)\\b" +           // 3: number
+    "|([A-Za-z_][A-Za-z0-9_]*)",            // 4: identifier (classify below)
+    "g"
+  );
+
+  function highlightPython(escaped) {
+    return escaped.replace(PY_RE, function (m, com, str, num, word) {
+      if (com !== undefined) return '<span class="tq-tok-com">' + com + "</span>";
+      if (str !== undefined) return '<span class="tq-tok-str">' + str + "</span>";
+      if (num !== undefined) return '<span class="tq-tok-num">' + num + "</span>";
+      if (word !== undefined) {
+        if (PY_KEYWORDS[word]) return '<span class="tq-tok-kw">' + word + "</span>";
+        if (PY_BOOL[word]) return '<span class="tq-tok-bln">' + word + "</span>";
+        if (PY_BUILTINS[word]) return '<span class="tq-tok-bln">' + word + "</span>";
+        return word; // ordinary identifier — leave as-is
+      }
+      return m;
+    });
+  }
+
+  // Styled code block. lang "python" (default) gets minimal highlighting; any
+  // other lang (e.g. "text") is shown escaped with no tokenizing.
+  TQ.code = function (src, opts) {
+    opts = opts || {};
+    var lang = opts.lang || "python";
+    src = (src === undefined || src === null) ? "" : String(src);
+    // strip a single trailing newline so the block doesn't end with a blank line
+    src = src.replace(/\n$/, "");
+    var escaped = escapeHtml(src);
+    var inner = (lang === "python") ? highlightPython(escaped) : escaped;
+
+    var wrap = TQ.el("div", { class: "tq-code" });
+    var head = TQ.el("div", { class: "tq-code-head" },
+      TQ.el("span", { class: "tq-code-chip", text: lang }),
+      opts.label ? TQ.el("span", { class: "tq-code-label", text: opts.label }) : null
+    );
+    var copyBtn = TQ.el("button", {
+      class: "tq-code-copy", type: "button", title: "Copy code", "aria-label": "Copy code", text: "copy"
+    });
+    copyBtn.addEventListener("click", function () {
+      function done() { copyBtn.textContent = "copied"; setTimeout(function () { copyBtn.textContent = "copy"; }, 1200); }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(src).then(done, function () {});
+        } else { done(); }
+      } catch (e) { /* clipboard may be blocked under file:// — ignore */ }
+    });
+    head.appendChild(copyBtn);
+    wrap.appendChild(head);
+
+    var pre = TQ.el("pre", { class: "tq-code-pre" },
+      TQ.el("code", { class: "tq-code-code", html: inner })
+    );
+    wrap.appendChild(pre);
+    if (opts.caption) wrap.appendChild(TQ.el("div", { class: "tq-code-caption", text: opts.caption }));
+    return wrap;
+  };
+
+  // "Go deeper" link card. Each item opens in a new tab. kind drives a small
+  // emoji + a11y label; the bare domain is shown subtly so learners know where
+  // a link goes before clicking.
+  var RESOURCE_KIND = {
+    paper:       { emoji: "📄", label: "paper" },
+    blog:        { emoji: "✍️", label: "blog post" },
+    video:       { emoji: "▶️", label: "video" },
+    doc:         { emoji: "📘", label: "documentation" },
+    code:        { emoji: "</>", label: "code" },
+    interactive: { emoji: "🛝", label: "interactive demo" }
+  };
+
+  function bareDomain(url) {
+    try {
+      var s = String(url).replace(/^[a-z]+:\/\//i, "");
+      s = s.split("/")[0].split("?")[0];
+      return s.replace(/^www\./i, "");
+    } catch (e) { return ""; }
+  }
+
+  TQ.resources = function (title, items) {
+    items = items || [];
+    var wrap = TQ.el("section", { class: "tq-resources" });
+    wrap.appendChild(TQ.el("div", { class: "tq-resources-head" },
+      TQ.el("span", { class: "tq-resources-mark", text: "↗", "aria-hidden": "true" }),
+      TQ.el("h3", { class: "tq-resources-title", text: title || "Go deeper" })
+    ));
+    var list = TQ.el("ul", { class: "tq-resources-list" });
+    items.forEach(function (it) {
+      var kind = RESOURCE_KIND[it.kind] || { emoji: "🔗", label: "link" };
+      var a = TQ.el("a", {
+        class: "tq-resource", href: it.url, target: "_blank", rel: "noopener"
+      },
+        TQ.el("span", { class: "tq-resource-kind", title: kind.label, "aria-hidden": "true", text: kind.emoji }),
+        TQ.el("span", { class: "tq-resource-body" },
+          TQ.el("span", { class: "tq-resource-toprow" },
+            TQ.el("span", { class: "tq-resource-label", text: it.label || it.url }),
+            TQ.el("span", { class: "tq-resource-domain", text: bareDomain(it.url) })
+          ),
+          it.note ? TQ.el("span", { class: "tq-resource-note", text: it.note }) : null
+        ),
+        TQ.el("span", { class: "tq-resource-arrow", "aria-hidden": "true", text: "→" })
+      );
+      var li = TQ.el("li", {}, a);
+      list.appendChild(li);
+    });
+    wrap.appendChild(list);
+    return wrap;
+  };
+
+  // Static inline SVG wrapped in a centered, bordered figure with a caption.
+  // The SVG is set via innerHTML so currentColor / CSS vars inside it resolve
+  // against the figure's color (var(--ink-soft)), keeping diagrams on-theme.
+  TQ.figure = function (svgMarkup, caption) {
+    var wrap = TQ.el("figure", { class: "tq-figure" });
+    wrap.appendChild(TQ.el("div", { class: "tq-figure-svg", html: svgMarkup || "" }));
+    if (caption) wrap.appendChild(TQ.el("figcaption", { class: "tq-figure-cap", text: caption }));
+    return wrap;
   };
 
   // Heatmap. Auto-normalizes to data range unless {min,max} provided.

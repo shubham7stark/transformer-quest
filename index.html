@@ -267,6 +267,107 @@ button { font-family: inherit; }
   white-space: nowrap;
 }
 
+/* ------------------------------------------------------------------- code */
+.tq-code {
+  background: var(--panel); border: 1px solid var(--line);
+  border-radius: var(--r); overflow: hidden; margin: 4px 0;
+}
+.tq-code-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 7px 12px; background: var(--bg-2);
+  border-bottom: 1px solid var(--line-soft);
+}
+.tq-code-chip {
+  font-family: var(--mono); font-size: 10.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: .5px;
+  color: var(--cool); background: rgba(47,184,198,.10);
+  border: 1px solid var(--cool-deep); border-radius: 6px; padding: 1px 8px;
+}
+.tq-code-label { font-size: 12px; color: var(--ink-mute); }
+.tq-code-copy {
+  margin-left: auto; background: none; border: 1px solid transparent;
+  color: var(--ink-faint); cursor: pointer; font-size: 10.5px;
+  text-transform: uppercase; letter-spacing: .4px; font-weight: 700;
+  padding: 3px 8px; border-radius: var(--r-sm); transition: color .14s, border-color .14s, background .14s;
+}
+.tq-code-copy:hover { color: var(--accent-2); border-color: var(--line); background: var(--panel-hi); }
+.tq-code-copy:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tq-code-pre {
+  margin: 0; padding: 14px 16px; overflow-x: auto;
+  background: transparent; line-height: 1.6;
+}
+.tq-code-code {
+  font-family: var(--mono); font-size: 13px; color: var(--ink);
+  white-space: pre; display: block; tab-size: 4;
+}
+.tq-code-caption {
+  padding: 8px 16px 11px; font-size: 12.5px; color: var(--ink-mute);
+  border-top: 1px solid var(--line-soft); background: var(--bg-2);
+}
+
+/* syntax tokens — flow through the shared color language */
+.tq-tok-com { color: var(--ink-mute); font-style: italic; }
+.tq-tok-str { color: var(--good); }
+.tq-tok-kw  { color: var(--accent); font-weight: 600; }
+.tq-tok-bln { color: var(--cool); }
+.tq-tok-num { color: var(--info); }
+
+/* -------------------------------------------------------------- resources */
+.tq-resources {
+  background: linear-gradient(180deg, var(--panel), var(--bg-2));
+  border: 1px solid var(--line); border-left: 3px solid var(--cool);
+  border-radius: var(--r-lg); padding: 16px 18px;
+}
+.tq-resources-head { display: flex; align-items: center; gap: 9px; margin-bottom: 12px; }
+.tq-resources-mark { color: var(--cool); font-size: 16px; font-weight: 800; }
+.tq-resources-title { margin: 0; font-size: 16px; letter-spacing: -.2px; }
+.tq-resources-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.tq-resource {
+  display: flex; align-items: flex-start; gap: 11px; text-decoration: none;
+  background: var(--bg-2); border: 1px solid var(--line); border-radius: var(--r);
+  padding: 10px 13px; color: var(--ink);
+  transition: border-color .14s, background .14s, transform .1s;
+}
+.tq-resource:hover { border-color: var(--cool-deep); background: var(--panel); transform: translateX(2px); }
+.tq-resource:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.tq-resource-kind {
+  flex: 0 0 auto; width: 26px; height: 26px; border-radius: 7px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; background: var(--panel-hi); border: 1px solid var(--line);
+  font-family: var(--mono); line-height: 1;
+}
+.tq-resource-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.tq-resource-toprow { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.tq-resource-label { font-size: 14px; font-weight: 600; color: var(--ink); }
+.tq-resource:hover .tq-resource-label { color: var(--accent-2); }
+.tq-resource-domain {
+  font-size: 11.5px; color: var(--ink-faint); font-family: var(--mono);
+  white-space: nowrap;
+}
+.tq-resource-note { font-size: 12.5px; color: var(--ink-mute); line-height: 1.45; }
+.tq-resource-arrow {
+  flex: 0 0 auto; align-self: center; color: var(--ink-faint); font-size: 15px;
+  transition: transform .14s, color .14s;
+}
+.tq-resource:hover .tq-resource-arrow { color: var(--cool); transform: translateX(3px); }
+
+/* ----------------------------------------------------------------- figure */
+.tq-figure {
+  margin: 4px 0; padding: 16px; display: flex; flex-direction: column;
+  align-items: center; gap: 11px;
+  background: var(--bg-2); border: 1px solid var(--line-soft);
+  border-radius: var(--r);
+}
+.tq-figure-svg {
+  width: 100%; display: flex; justify-content: center;
+  color: var(--ink-soft); /* currentColor for inline SVG strokes/fills */
+}
+.tq-figure-svg svg { max-width: 100%; height: auto; display: block; }
+.tq-figure-cap {
+  font-size: 12.5px; color: var(--ink-mute); text-align: center;
+  max-width: 56ch; line-height: 1.45;
+}
+
 /* ----------------------------------------------------------------- heatmap */
 .tq-heatmap-wrap { display: inline-block; }
 .tq-heatmap-title {
@@ -696,6 +797,25 @@ button { font-family: inherit; }
  *  TQ.row(...children)/TQ.col(...children) fl: layout helpers
  *  TQ.badge(text,kind)       small pill label; kind in {default,good,warn,info}
  *  TQ.kv(label,value)        a small label:value stat chip
+ *
+ * ---- content helpers: CODE / LINKS / DIAGRAMS (use in every level) --------
+ *  TQ.code(src, opts)        -> node. A styled <pre><code> block with a small
+ *                            language chip. opts = {lang:"python"(default)|"text",
+ *                            caption, label}. Minimal, robust python syntax
+ *                            highlighting (HTML-escaped first; never corrupts
+ *                            code). Indentation/newlines preserved exactly.
+ *                            e.g. TQ.code("x = nn.Embedding(50257, 16)\n", {lang:"python", caption:"lookup"})
+ *  TQ.resources(title,items) -> node. A "Go deeper" card: heading + list of
+ *                            external links. items = [{label,url,
+ *                            kind:"paper"|"blog"|"video"|"doc"|"code"|"interactive",
+ *                            note?}]. Each link opens in a NEW TAB (target=_blank
+ *                            rel=noopener), tagged with a kind emoji + bare domain.
+ *                            e.g. TQ.resources("Go deeper", [{label:"Illustrated Word2Vec", url:"https://jalammar.github.io/illustrated-word2vec/", kind:"blog"}])
+ *  TQ.figure(svgMarkup, caption) -> node. Centers a static inline SVG string
+ *                            (set via innerHTML) in a bordered figure with a
+ *                            caption. SVG should use currentColor / CSS vars so
+ *                            it inherits the theme.
+ *                            e.g. TQ.figure('<svg viewBox="0 0 100 20">…</svg>', "text → ids → vectors")
  *
  * ============================================================================
  * GAME ENGINE
@@ -1174,6 +1294,156 @@ button { font-family: inherit; }
       TQ.el("span", { class: "tq-kv-label", text: label }),
       TQ.el("span", { class: "tq-kv-val", text: value })
     );
+  };
+
+  /* ------------------------------------------------------------------ *
+   *  CONTENT HELPERS — CODE / LINKS / DIAGRAMS
+   *  Reusable across every level so CODE, external LINKS, and small static
+   *  DIAGRAMS all share one look. CODE highlighting operates on ESCAPED text
+   *  and is deliberately minimal so it can never corrupt the source.
+   * ------------------------------------------------------------------ */
+
+  function escapeHtml(s) {
+    return String(s)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+
+  // Minimal, ROBUST python highlighter. Strategy: HTML-escape the whole source
+  // FIRST, then run a SINGLE pass with one combined regex whose alternatives are
+  // tried in priority order (comments, then strings, then keyword/builtin/bool
+  // words, then numbers). Because we only ever wrap whole matched runs of the
+  // already-escaped text in <span> tags — and never re-scan inside a wrap — a
+  // token can never be split or nested, so the output is always valid and the
+  // code reads back identically (tags stripped == original escaped source).
+  var PY_KEYWORDS = { "def":1,"return":1,"for":1,"in":1,"if":1,"else":1,"import":1,
+    "from":1,"class":1,"with":1,"as":1,"lambda":1 };
+  var PY_BOOL = { "None":1,"True":1,"False":1 };
+  var PY_BUILTINS = { "range":1,"len":1,"print":1 };
+
+  // Order matters: strings/comments first so a # or keyword INSIDE a string is
+  // not separately highlighted. Operates on escaped text, so quotes are literal
+  // quote chars (we escaped only & < >, leaving ' and " intact).
+  var PY_RE = new RegExp(
+    "(#[^\\n]*)" +                          // 1: comment to end of line
+    "|(\"(?:[^\"\\\\\\n]|\\\\.)*\"|'(?:[^'\\\\\\n]|\\\\.)*')" + // 2: string
+    "|\\b(\\d+(?:\\.\\d+)?)\\b" +           // 3: number
+    "|([A-Za-z_][A-Za-z0-9_]*)",            // 4: identifier (classify below)
+    "g"
+  );
+
+  function highlightPython(escaped) {
+    return escaped.replace(PY_RE, function (m, com, str, num, word) {
+      if (com !== undefined) return '<span class="tq-tok-com">' + com + "</span>";
+      if (str !== undefined) return '<span class="tq-tok-str">' + str + "</span>";
+      if (num !== undefined) return '<span class="tq-tok-num">' + num + "</span>";
+      if (word !== undefined) {
+        if (PY_KEYWORDS[word]) return '<span class="tq-tok-kw">' + word + "</span>";
+        if (PY_BOOL[word]) return '<span class="tq-tok-bln">' + word + "</span>";
+        if (PY_BUILTINS[word]) return '<span class="tq-tok-bln">' + word + "</span>";
+        return word; // ordinary identifier — leave as-is
+      }
+      return m;
+    });
+  }
+
+  // Styled code block. lang "python" (default) gets minimal highlighting; any
+  // other lang (e.g. "text") is shown escaped with no tokenizing.
+  TQ.code = function (src, opts) {
+    opts = opts || {};
+    var lang = opts.lang || "python";
+    src = (src === undefined || src === null) ? "" : String(src);
+    // strip a single trailing newline so the block doesn't end with a blank line
+    src = src.replace(/\n$/, "");
+    var escaped = escapeHtml(src);
+    var inner = (lang === "python") ? highlightPython(escaped) : escaped;
+
+    var wrap = TQ.el("div", { class: "tq-code" });
+    var head = TQ.el("div", { class: "tq-code-head" },
+      TQ.el("span", { class: "tq-code-chip", text: lang }),
+      opts.label ? TQ.el("span", { class: "tq-code-label", text: opts.label }) : null
+    );
+    var copyBtn = TQ.el("button", {
+      class: "tq-code-copy", type: "button", title: "Copy code", "aria-label": "Copy code", text: "copy"
+    });
+    copyBtn.addEventListener("click", function () {
+      function done() { copyBtn.textContent = "copied"; setTimeout(function () { copyBtn.textContent = "copy"; }, 1200); }
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(src).then(done, function () {});
+        } else { done(); }
+      } catch (e) { /* clipboard may be blocked under file:// — ignore */ }
+    });
+    head.appendChild(copyBtn);
+    wrap.appendChild(head);
+
+    var pre = TQ.el("pre", { class: "tq-code-pre" },
+      TQ.el("code", { class: "tq-code-code", html: inner })
+    );
+    wrap.appendChild(pre);
+    if (opts.caption) wrap.appendChild(TQ.el("div", { class: "tq-code-caption", text: opts.caption }));
+    return wrap;
+  };
+
+  // "Go deeper" link card. Each item opens in a new tab. kind drives a small
+  // emoji + a11y label; the bare domain is shown subtly so learners know where
+  // a link goes before clicking.
+  var RESOURCE_KIND = {
+    paper:       { emoji: "📄", label: "paper" },
+    blog:        { emoji: "✍️", label: "blog post" },
+    video:       { emoji: "▶️", label: "video" },
+    doc:         { emoji: "📘", label: "documentation" },
+    code:        { emoji: "</>", label: "code" },
+    interactive: { emoji: "🛝", label: "interactive demo" }
+  };
+
+  function bareDomain(url) {
+    try {
+      var s = String(url).replace(/^[a-z]+:\/\//i, "");
+      s = s.split("/")[0].split("?")[0];
+      return s.replace(/^www\./i, "");
+    } catch (e) { return ""; }
+  }
+
+  TQ.resources = function (title, items) {
+    items = items || [];
+    var wrap = TQ.el("section", { class: "tq-resources" });
+    wrap.appendChild(TQ.el("div", { class: "tq-resources-head" },
+      TQ.el("span", { class: "tq-resources-mark", text: "↗", "aria-hidden": "true" }),
+      TQ.el("h3", { class: "tq-resources-title", text: title || "Go deeper" })
+    ));
+    var list = TQ.el("ul", { class: "tq-resources-list" });
+    items.forEach(function (it) {
+      var kind = RESOURCE_KIND[it.kind] || { emoji: "🔗", label: "link" };
+      var a = TQ.el("a", {
+        class: "tq-resource", href: it.url, target: "_blank", rel: "noopener"
+      },
+        TQ.el("span", { class: "tq-resource-kind", title: kind.label, "aria-hidden": "true", text: kind.emoji }),
+        TQ.el("span", { class: "tq-resource-body" },
+          TQ.el("span", { class: "tq-resource-toprow" },
+            TQ.el("span", { class: "tq-resource-label", text: it.label || it.url }),
+            TQ.el("span", { class: "tq-resource-domain", text: bareDomain(it.url) })
+          ),
+          it.note ? TQ.el("span", { class: "tq-resource-note", text: it.note }) : null
+        ),
+        TQ.el("span", { class: "tq-resource-arrow", "aria-hidden": "true", text: "→" })
+      );
+      var li = TQ.el("li", {}, a);
+      list.appendChild(li);
+    });
+    wrap.appendChild(list);
+    return wrap;
+  };
+
+  // Static inline SVG wrapped in a centered, bordered figure with a caption.
+  // The SVG is set via innerHTML so currentColor / CSS vars inside it resolve
+  // against the figure's color (var(--ink-soft)), keeping diagrams on-theme.
+  TQ.figure = function (svgMarkup, caption) {
+    var wrap = TQ.el("figure", { class: "tq-figure" });
+    wrap.appendChild(TQ.el("div", { class: "tq-figure-svg", html: svgMarkup || "" }));
+    if (caption) wrap.appendChild(TQ.el("figcaption", { class: "tq-figure-cap", text: caption }));
+    return wrap;
   };
 
   // Heatmap. Auto-normalizes to data range unless {min,max} provided.
@@ -2026,6 +2296,74 @@ button { font-family: inherit; }
         vecList.appendChild(TQ.vectorView(emb[vi], { label: tokens[vi], cellSize: 24 }));
       }
       vectorBlock.appendChild(vecList);
+
+      // Orienting diagram: text -> token ids -> vectors. Static SVG, inherits
+      // theme colors via currentColor / CSS vars (no hardcoded hex).
+      vectorBlock.appendChild(TQ.figure(
+        '<svg viewBox="0 0 560 120" width="560" height="120" role="img" ' +
+          'aria-label="Flow from text to token ids to embedding vectors" ' +
+          'font-family="var(--mono)" font-size="13">' +
+          '<defs><marker id="tq-l1-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // stage 1: text
+          '<text x="70" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">text</text>' +
+          '<rect x="14" y="34" width="112" height="34" rx="7" fill="var(--panel-hi)" ' +
+            'stroke="var(--line)"/>' +
+          '<text x="70" y="56" text-anchor="middle" fill="var(--ink)">"The cat"</text>' +
+          // stage 2: token ids
+          '<text x="280" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">token ids</text>' +
+          '<rect x="224" y="34" width="112" height="34" rx="7" fill="var(--panel-hi)" ' +
+            'stroke="var(--line)"/>' +
+          '<text x="280" y="56" text-anchor="middle" fill="var(--accent-2)">[464, 3797]</text>' +
+          // stage 3: vectors
+          '<text x="490" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">embeddings</text>' +
+          '<g>' +
+            '<rect x="434" y="34" width="14" height="14" rx="2" fill="var(--cool)"/>' +
+            '<rect x="450" y="34" width="14" height="14" rx="2" fill="var(--info)"/>' +
+            '<rect x="466" y="34" width="14" height="14" rx="2" fill="var(--accent)"/>' +
+            '<rect x="482" y="34" width="14" height="14" rx="2" fill="var(--good)"/>' +
+            '<rect x="498" y="34" width="14" height="14" rx="2" fill="var(--cool-deep)"/>' +
+            '<rect x="514" y="34" width="14" height="14" rx="2" fill="var(--accent-2)"/>' +
+            '<rect x="434" y="52" width="14" height="14" rx="2" fill="var(--accent)"/>' +
+            '<rect x="450" y="52" width="14" height="14" rx="2" fill="var(--good)"/>' +
+            '<rect x="466" y="52" width="14" height="14" rx="2" fill="var(--cool)"/>' +
+            '<rect x="482" y="52" width="14" height="14" rx="2" fill="var(--accent-2)"/>' +
+            '<rect x="498" y="52" width="14" height="14" rx="2" fill="var(--info)"/>' +
+            '<rect x="514" y="52" width="14" height="14" rx="2" fill="var(--cool-deep)"/>' +
+          '</g>' +
+          // arrows + labels
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="130" y1="51" x2="218" y2="51" marker-end="url(#tq-l1-arrow)"/>' +
+            '<line x1="340" y1="51" x2="428" y2="51" marker-end="url(#tq-l1-arrow)"/>' +
+          '</g>' +
+          '<text x="174" y="44" text-anchor="middle" fill="var(--ink-faint)" font-size="10">tokenize</text>' +
+          '<text x="384" y="44" text-anchor="middle" fill="var(--ink-faint)" font-size="10">lookup</text>' +
+        '</svg>',
+        "The input pipeline: text is split into tokens, each token maps to an integer id, " +
+        "and each id indexes one row of the embedding table to produce its vector."
+      ));
+
+      // Minimal, correct PyTorch: tokenize -> nn.Embedding lookup -> the token
+      // vectors this level visualizes. Mirrors the toy (vocab→ids→rows of a table).
+      vectorBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "\n" +
+        "# 1. tokenize: text -> integer ids (one row per vocabulary entry)\n" +
+        "token_ids = torch.tensor([464, 3797, 3332, 319, 262, 2603])  # The cat sat on the mat\n" +
+        "\n" +
+        "# 2. the embedding table: a trainable (vocab_size x d_model) matrix\n" +
+        "vocab_size, d_model = 50257, 16\n" +
+        "embedding = nn.Embedding(vocab_size, d_model)\n" +
+        "\n" +
+        "# 3. lookup: each id selects its row -> (seq_len x d_model) vectors\n" +
+        "vectors = embedding(token_ids)   # shape: (6, 16) — exactly what's drawn above\n" +
+        "print(vectors.shape)             # torch.Size([6, 16])\n",
+        { lang: "python", label: "embedding lookup",
+          caption: "nn.Embedding is just a lookup table: id i returns row i. Those rows are the colored vectors above." }
+      ));
+
       vectorBlock.appendChild(TQ.callout(
         "Notice \"The\" (#0) and \"the\" (#4) look almost identical — same word, near-identical vectors. " +
         "\"cat\" and \"mat\" share a family resemblance too. That visual similarity is the whole point: " +
@@ -2202,6 +2540,34 @@ button { font-family: inherit; }
       ));
       updatePick();
       root.appendChild(pickBlock);
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — tokens & embeddings", [
+        {
+          label: "The Illustrated Word2Vec",
+          url: "https://jalammar.github.io/illustrated-word2vec/",
+          kind: "blog",
+          note: "Jay Alammar's visual tour of how word vectors capture meaning — the geometry you just clicked through."
+        },
+        {
+          label: "Tiktokenizer — see tokenization live",
+          url: "https://tiktokenizer.vercel.app/",
+          kind: "interactive",
+          note: "Type any text and watch a real BPE tokenizer split it into token ids in your browser."
+        },
+        {
+          label: "Hugging Face — Summary of the tokenizers",
+          url: "https://huggingface.co/docs/transformers/en/tokenizer_summary",
+          kind: "doc",
+          note: "How real tokenizers (BPE, WordPiece, Unigram) actually carve text into sub-word pieces."
+        },
+        {
+          label: "Karpathy — Let's build the GPT Tokenizer",
+          url: "https://www.youtube.com/watch?v=zduSFxRajkE",
+          kind: "video",
+          note: "Builds a tokenizer from scratch, end to end — the step that produces the ids feeding nn.Embedding."
+        }
+      ]));
 
       /* --------------------------------------------------- wrap-up takeaway */
       root.appendChild(TQ.block(
@@ -2397,7 +2763,8 @@ button { font-family: inherit; }
         TQ.h(2, "The problem attention solves"),
         TQ.p(
           "A CNN mixes information ", TQ.el("strong", { text: "locally" }),
-          " — a 3×3 kernel only sees its neighbors, and you stack layers to slowly grow the receptive field. ",
+          " — a 3×3 kernel only sees its immediate neighbors, and you stack layers to slowly grow the ",
+          TQ.el("em", { text: "receptive field" }), " (how far a layer can \"see\"). ",
           "Language doesn't respect locality: in ",
           TQ.el("em", { text: "\"the cat that the dog chased sat on the mat,\"" }),
           " the word that binds ", TQ.el("strong", { text: "sat" }), " to its subject is ",
@@ -2408,7 +2775,8 @@ button { font-family: inherit; }
           " is the transformer's answer: a layer where every token can pull information directly from every ",
           "other token in ", TQ.el("strong", { text: "one hop" }),
           " — and, crucially, it ", TQ.el("em", { text: "learns which ones matter" }),
-          " instead of using a fixed stencil. No fixed receptive field, no recurrence: just learned, ",
+          " instead of using a fixed stencil. No fixed receptive field, no recurrence ",
+          "(processing tokens one-after-another like an RNN): just learned, ",
           "content-dependent routing of information."
         )
       ));
@@ -2432,9 +2800,11 @@ button { font-family: inherit; }
           " Key gets a relevance score and the answer is a blend of all the Values weighted by those scores."
         ),
         TQ.callout(
-          "Why \"differentiable\"? A hard hash-map lookup (argmax) has zero gradient almost everywhere, so it " +
-          "can't be trained by gradient descent. A softmax blend has gradient everywhere — that's the whole " +
-          "reason attention is learnable end-to-end."
+          "Why \"differentiable\"? (Optional aside, if you've met training before.) A gradient is the slope the " +
+          "network follows to improve a little at a time. A hard hash-map lookup (argmax = just pick the single " +
+          "highest, a flat all-or-nothing choice) has no slope to follow, so it can't be trained by gradient " +
+          "descent. A softmax blend changes smoothly as the weights shift — there's always a slope — which is " +
+          "the whole reason attention is learnable end-to-end."
         ),
         TQ.note(
           "Q/K/V here are real: each is the toy embedding matrix times a distinct projection " +
@@ -2861,6 +3231,106 @@ button { font-family: inherit; }
         )
       ));
 
+      /* ----------------------- shape pipeline figure + PyTorch ----------------------- */
+      // The interactive canvas/bench teach the CONCEPT; neither shows the
+      // dimension bookkeeping (d_model=16 -> d_k=8) nor the (n x n) attention
+      // matrix. This static figure + code make those shapes explicit, right
+      // where the four formulas above are defined. Static SVG, theme via CSS vars.
+      var codeBlock = TQ.block(
+        TQ.h(2, "The same four steps as PyTorch — and their shapes"),
+        TQ.p(
+          "Project → Score → Normalize → Blend is just four lines of tensor code. The diagram tracks the ",
+          "shapes as they flow: the embeddings (", TQ.math("n × d_model"), ") become ",
+          TQ.math("Q, K, V"), " (", TQ.math("n × d_k"), "), the queries-dotted-with-keys make an ",
+          TQ.math("n × n"), " grid of scores, softmax keeps that shape, and the final blend lands back at ",
+          TQ.math("n × d_k"), "."
+        )
+      );
+
+      codeBlock.appendChild(TQ.figure(
+        '<svg viewBox="0 0 720 132" width="720" height="132" role="img" ' +
+          'aria-label="Shape pipeline: x is n by d_model, projected to Q K V at n by d_k, ' +
+          'scored to an n by n grid, softmaxed, then blended back to n by d_k" ' +
+          'font-family="var(--mono)" font-size="13">' +
+          '<defs><marker id="tq-l2-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // box 1: x
+          '<rect x="8" y="46" width="96" height="40" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="56" y="64" text-anchor="middle" fill="var(--ink)">x</text>' +
+          '<text x="56" y="79" text-anchor="middle" fill="var(--ink-mute)" font-size="11">n × d_model</text>' +
+          // box 2: Q,K,V
+          '<rect x="176" y="46" width="104" height="40" rx="7" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+          '<text x="228" y="64" text-anchor="middle" fill="var(--accent)">Q, K, V</text>' +
+          '<text x="228" y="79" text-anchor="middle" fill="var(--ink-mute)" font-size="11">n × d_k</text>' +
+          // box 3: scores
+          '<rect x="352" y="46" width="104" height="40" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="404" y="64" text-anchor="middle" fill="var(--ink)">scores</text>' +
+          '<text x="404" y="79" text-anchor="middle" fill="var(--ink-mute)" font-size="11">n × n</text>' +
+          // box 4: weights
+          '<rect x="528" y="46" width="104" height="40" rx="7" fill="var(--panel-hi)" stroke="var(--cool)"/>' +
+          '<text x="580" y="64" text-anchor="middle" fill="var(--cool)">weights</text>' +
+          '<text x="580" y="79" text-anchor="middle" fill="var(--ink-mute)" font-size="11">n × n</text>' +
+          // arrows along the top row
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="106" y1="66" x2="174" y2="66" marker-end="url(#tq-l2-arrow)"/>' +
+            '<line x1="282" y1="66" x2="350" y2="66" marker-end="url(#tq-l2-arrow)"/>' +
+            '<line x1="458" y1="66" x2="526" y2="66" marker-end="url(#tq-l2-arrow)"/>' +
+          '</g>' +
+          // arrow labels
+          '<text x="140" y="40" text-anchor="middle" fill="var(--ink-faint)" font-size="10">project</text>' +
+          '<text x="140" y="56" text-anchor="middle" fill="var(--ink-faint)" font-size="10">Wq/Wk/Wv</text>' +
+          '<text x="316" y="40" text-anchor="middle" fill="var(--ink-faint)" font-size="10">score</text>' +
+          '<text x="316" y="56" text-anchor="middle" fill="var(--ink-faint)" font-size="10">Q @ K.T</text>' +
+          '<text x="492" y="40" text-anchor="middle" fill="var(--ink-faint)" font-size="10">softmax</text>' +
+          '<text x="492" y="56" text-anchor="middle" fill="var(--ink-faint)" font-size="10">each row</text>' +
+          // blend arrow down-right to out box
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<path d="M580 88 L580 110 L636 110" marker-end="url(#tq-l2-arrow)"/>' +
+          '</g>' +
+          '<text x="600" y="106" text-anchor="middle" fill="var(--ink-faint)" font-size="10">blend (@V)</text>' +
+          // out box
+          '<rect x="640" y="94" width="76" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--good)"/>' +
+          '<text x="678" y="110" text-anchor="middle" fill="var(--good)" font-size="12">out</text>' +
+          '<text x="678" y="123" text-anchor="middle" fill="var(--ink-mute)" font-size="10">n × d_k</text>' +
+        '</svg>',
+        "Shapes flowing through one attention lookup: project the embeddings to Q/K/V, " +
+        "dot every query with every key to fill an n × n score grid, softmax each row, " +
+        "then blend the Values back to n × d_k."
+      ));
+
+      // Minimal, correct PyTorch for ONE attention lookup. Mirrors the four
+      // formulas above (project / score / softmax / blend). No /sqrt(dk) here —
+      // that arrives in Level 3 (noted inline).
+      codeBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "\n" +
+        "# x: the token embeddings from Level 1 -> shape (seq_len, d_model)\n" +
+        "x = torch.randn(6, 16)            # 6 tokens, 16-dim embeddings\n" +
+        "\n" +
+        "# 1. PROJECT: one linear map each turns every embedding into Q, K, V\n" +
+        "d_k = 8\n" +
+        "W_q, W_k, W_v = (nn.Linear(16, d_k, bias=False) for _ in range(3))\n" +
+        "Q, K, V = W_q(x), W_k(x), W_v(x)  # each (6, 8): one role-vector per token\n" +
+        "\n" +
+        "# 2. SCORE: every Query dotted with every Key -> a (6, 6) grid of relevances\n" +
+        "scores = Q @ K.T                  # scores[i, j] = Q[i] . K[j]\n" +
+        "# (Level 3 will divide these by sqrt(d_k) for stability; we skip it here.)\n" +
+        "\n" +
+        "# 3. NORMALIZE: softmax each row -> positive weights that sum to 1\n" +
+        "weights = scores.softmax(dim=-1)  # (6, 6), each row sums to 1.0\n" +
+        "\n" +
+        "# 4. BLEND: weighted average of the Value vectors\n" +
+        "out = weights @ V                 # (6, 8): each row is a soft mix of all V's\n" +
+        "print(out.shape)                  # torch.Size([6, 8])\n",
+        { lang: "python", label: "one attention lookup",
+          caption: "out is a soft weighted average of V — never a hard pick of one row. " +
+            "Those four lines are exactly the Project → Score → Normalize → Blend story above." }
+      ));
+
+      root.appendChild(codeBlock);
+
       /* ============================================================= *
        *  PRIMARY INTERACTIVE — the soft database lookup bench
        * ============================================================= */
@@ -3129,7 +3599,21 @@ button { font-family: inherit; }
         TQ.callout(
           "Next level: we add the missing /√dk scaling and stack several of these lookups in parallel " +
           "(multi-head). Same lookup, run many times with different projections."
-        )
+        ),
+        TQ.resources("Go deeper", [
+          { label: "The Illustrated Transformer", kind: "blog",
+            url: "https://jalammar.github.io/illustrated-transformer/",
+            note: "Jay Alammar's visual walk through Q/K/V and self-attention" },
+          { label: "3Blue1Brown — Attention in transformers, visually explained", kind: "video",
+            url: "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+            note: "geometric intuition for the dot-product scoring" },
+          { label: "Andrej Karpathy — Let's build GPT from scratch", kind: "video",
+            url: "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+            note: "codes a single attention head live, step by step" },
+          { label: "Attention Is All You Need (the original paper)", kind: "paper",
+            url: "https://arxiv.org/abs/1706.03762",
+            note: "where scaled dot-product attention was introduced" }
+        ])
       ));
 
       /* scoped styles for this level — colors only via CSS variables, never hex */
@@ -3315,7 +3799,8 @@ button { font-family: inherit; }
           "against its own neighbors, not some other input. The output for each token is a content-weighted ",
           "blend of every token's Value, where the weights are recomputed on the fly from how well that token's ",
           "Query aligns with every Key. No fixed kernel; the mixing weights come from the data every forward pass. ",
-          "That data-dependent routing is why transformers eat long-range dependencies for breakfast where a CNN ",
+          "That data-dependent routing is why transformers eat long-range dependencies for breakfast (a ",
+          "long-range dependency = a token needing information from a far-away token) where a CNN ",
           "needed many stacked layers to see across an image."
         )
       ));
@@ -3328,10 +3813,11 @@ button { font-family: inherit; }
           " is the raw dot product of token i's Query with token j's Key — the same un-normalized alignment ",
           "you computed by hand in Level 1, but now between learned projections. Big dot product = strong match ",
           "= token i wants j's Value. Then divide every score by ", TQ.math("√dk"),
-          " (the temperature fix, next block). Then ", TQ.el("strong", { text: "softmax" }),
+          " (the temperature fix — temperature = how peaked vs flat the softmax comes out — next block). Then ", TQ.el("strong", { text: "softmax" }),
           " runs across each ROW, turning scores into a probability distribution that sums to 1.0 — the ",
           "attention weights. Finally multiply that weight matrix by ", TQ.math("V"),
-          ", so each token's output is a convex combination of all Values, dominated by the tokens it scored highest against."
+          ", so each token's output is a convex combination (a weighted average whose weights sum to 1) of all Values, ",
+          "dominated by the tokens it scored highest against."
         ),
         TQ.callout(
           "Nothing magic — three matmuls, one scale, one softmax. The lab below runs exactly this pipeline on the " +
@@ -3352,7 +3838,8 @@ button { font-family: inherit; }
           "Now feed those into softmax. Softmax is exponential, so it's brutally sensitive to the ",
           TQ.el("strong", { text: "spread" }), " of its inputs: when scores are large and spread out, ",
           TQ.math("exp()"), " makes the biggest one swamp the rest and the distribution collapses toward one-hot. ",
-          "You know exactly why that's poison — softmax in its saturated regime has gradients near zero (the same ",
+          "You know exactly why that's poison — softmax in its saturated regime (output so close to one-hot that its ",
+          "slope, i.e. gradient, is ~0) has gradients near zero (the same ",
           "vanishing-gradient flatness you fought with saturated sigmoids), so the model can barely learn which ",
           "token to attend to. Dividing by ", TQ.math("√dk"), " cancels the dimension-induced inflation, holding ",
           "the score variance ~constant regardless of head size, keeping softmax in its smooth, high-gradient regime. ",
@@ -3704,6 +4191,32 @@ button { font-family: inherit; }
         "convex combination of Values: a token can amplify or ignore neighbors, but never invents signal outside the Value set."
       ));
 
+      // Minimal, runnable-style PyTorch mirroring the lab pipeline exactly:
+      // QKᵀ -> /√dk -> optional causal mask (−∞ before softmax) -> softmax row -> @V.
+      // One head, no nn.Module / batching boilerplate — exactly the 6×6 single-head visual.
+      lab.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn.functional as F\n" +
+        "import math\n" +
+        "\n" +
+        "def self_attention(Q, K, V, causal=False):\n" +
+        "    # Q, K, V: (seq_len, d_k) — one head, like the 6x6 lab above\n" +
+        "    d_k = Q.size(-1)\n" +
+        "    # stage 1: raw scores S[i,j] = q_i . k_j   (the QK^T heatmap)\n" +
+        "    scores = (Q @ K.transpose(-2, -1)) / math.sqrt(d_k)  # stage 2: the /sqrt(d_k) scaling\n" +
+        "    if causal:\n" +
+        "        # block future keys j > i: set them to -inf BEFORE softmax\n" +
+        "        mask = torch.triu(torch.ones_like(scores), diagonal=1).bool()\n" +
+        "        scores = scores.masked_fill(mask, float('-inf'))    # exp(-inf) = 0\n" +
+        "    # stage 3: softmax across each ROW -> attention weights (each row sums to 1.0)\n" +
+        "    weights = F.softmax(scores, dim=-1)\n" +
+        "    # blend Values: a convex combination of every token's V\n" +
+        "    return weights @ V, weights\n",
+        { lang: "python",
+          label: "scaled dot-product self-attention (1 head)",
+          caption: "Mirrors the lab: QK^T, /sqrt(d_k), optional causal mask -inf before softmax, then @V." }
+      ));
+
       // first paint
       refresh();
       root.appendChild(lab);
@@ -3727,6 +4240,34 @@ button { font-family: inherit; }
           "the mechanism and there as why it costs nothing to enforce."
         )
       ));
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — self-attention & scaling", [
+        {
+          label: "The Annotated Transformer",
+          url: "https://nlp.seas.harvard.edu/annotated-transformer/",
+          kind: "code",
+          note: "Harvard's line-by-line PyTorch walkthrough — the same scaled dot-product attention you just coded, in context."
+        },
+        {
+          label: "The Illustrated Transformer",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          kind: "blog",
+          note: "Jay Alammar's visual tour of Q/K/V, scoring, and softmax — the pictures behind this lab."
+        },
+        {
+          label: "Attention Is All You Need",
+          url: "https://arxiv.org/abs/1706.03762",
+          kind: "paper",
+          note: "The original paper that introduced softmax(QKᵀ/√dk)·V and the √dk scaling motivation."
+        },
+        {
+          label: "3Blue1Brown — Attention, visually explained",
+          url: "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+          kind: "video",
+          note: "A geometric, animated build of exactly the attention mechanism you turned the knobs on here."
+        }
+      ]));
 
       /* small scoped styles (colors via CSS variables only — no hardcoded hex) */
       injectOnce("tq-lvl03-css",
@@ -3943,11 +4484,74 @@ button { font-family: inherit; }
           TQ.el("span", { class: "tq-mh-arith-item" }, TQ.math("concat width = H × dk = " + H + " × " + dk + " = " + (H * dk) + " = d_model"))
         ),
         TQ.p(
+          "(\"Subspace\" just means a smaller slice of the representation space — each head looks at only ",
+          TQ.math("dk"), " of the ", TQ.math("d_model"), " coordinates, reached through its own learned projection, ",
+          "rather than the full width.) ",
           "Here ", TQ.math("d_model = " + dModel), ", ", TQ.math("H = " + H), ", so ", TQ.math("dk = " + dk),
-          " — four ", dk + "-dimensional attentions running side by side. This is almost exactly your CNN intuition: ",
-          "a conv layer doesn't apply one filter, it applies a ", TQ.el("strong", { text: "bank" }),
+          " — four ", dk + "-dimensional attentions running side by side. ",
+          TQ.el("strong", { text: "If you've seen CNNs" }), " (optional analogy — skip if not): ",
+          "this is almost exactly that intuition — a conv layer doesn't apply one filter, it applies a ",
+          TQ.el("strong", { text: "bank" }),
           " of filters, each tuned to a different pattern (edges, texture, color blobs). A head is an attention ",
           "\"filter\"; the bank gives the layer multiple simultaneous ways to relate tokens."
+        ),
+        // Orienting diagram: the whole split → parallel heads → concat → Wo
+        // pipeline at a glance, BEFORE the interactive parts dissect each stage.
+        // Static SVG, theme colors via CSS vars / currentColor (no hardcoded hex).
+        TQ.figure(
+          '<svg viewBox="0 0 720 230" width="720" height="230" role="img" ' +
+            'aria-label="Multi-head attention pipeline: split into heads, attend in parallel, concatenate, project with Wo" ' +
+            'font-family="var(--mono)" font-size="12">' +
+            '<defs><marker id="tq-l4-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+              'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+            '<g stroke="currentColor" stroke-width="1.4" fill="none" color="var(--ink-faint)">' +
+              // X -> split fan-out
+              '<line x1="92" y1="115" x2="150" y2="115" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="156" y1="115" x2="300" y2="35"  marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="156" y1="115" x2="300" y2="88"  marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="156" y1="115" x2="300" y2="141" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="156" y1="115" x2="300" y2="194" marker-end="url(#tq-l4-arrow)"/>' +
+              // heads -> concat converge
+              '<line x1="430" y1="35"  x2="540" y2="108" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="430" y1="88"  x2="540" y2="112" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="430" y1="141" x2="540" y2="118" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="430" y1="194" x2="540" y2="122" marker-end="url(#tq-l4-arrow)"/>' +
+              // concat -> Wo -> out
+              '<line x1="600" y1="115" x2="630" y2="115" marker-end="url(#tq-l4-arrow)"/>' +
+            '</g>' +
+            // X input
+            '<text x="48" y="92" text-anchor="middle" fill="var(--ink-mute)" font-size="11">input</text>' +
+            '<rect x="14" y="100" width="76" height="32" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="52" y="120" text-anchor="middle" fill="var(--ink)">X (6×16)</text>' +
+            // split node label
+            '<text x="150" y="150" text-anchor="middle" fill="var(--ink-faint)" font-size="10">split H=4</text>' +
+            // four head boxes
+            '<g>' +
+              '<rect x="300" y="20"  width="130" height="30" rx="6" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+              '<text x="365" y="39"  text-anchor="middle" fill="var(--ink)">head 1 · dk=4</text>' +
+              '<rect x="300" y="73"  width="130" height="30" rx="6" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+              '<text x="365" y="92"  text-anchor="middle" fill="var(--ink)">head 2 · dk=4</text>' +
+              '<rect x="300" y="126" width="130" height="30" rx="6" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+              '<text x="365" y="145" text-anchor="middle" fill="var(--ink)">head 3 · dk=4</text>' +
+              '<rect x="300" y="179" width="130" height="30" rx="6" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+              '<text x="365" y="198" text-anchor="middle" fill="var(--ink)">head 4 · dk=4</text>' +
+            '</g>' +
+            '<text x="365" y="13" text-anchor="middle" fill="var(--ink-mute)" font-size="10">attend in parallel → each 6×4</text>' +
+            // concat node
+            '<rect x="540" y="98" width="60" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--accent-2)"/>' +
+            '<text x="570" y="119" text-anchor="middle" fill="var(--ink)">concat</text>' +
+            '<text x="570" y="150" text-anchor="middle" fill="var(--ink-faint)" font-size="10">6×16</text>' +
+            // Wo box
+            '<rect x="630" y="99" width="74" height="32" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="667" y="119" text-anchor="middle" fill="var(--ink)">Wo (16×16)</text>' +
+            '<text x="667" y="150" text-anchor="middle" fill="var(--ink-faint)" font-size="10">out 6×16</text>' +
+            // arrow shape labels
+            '<text x="120" y="108" text-anchor="middle" fill="var(--ink-faint)" font-size="10">6×16</text>' +
+            '<text x="250" y="78"  text-anchor="middle" fill="var(--ink-faint)" font-size="10">6×4 ×4</text>' +
+          '</svg>',
+          "The whole pipeline at a glance: split d_model into H heads, attend in parallel subspaces, " +
+          "concatenate back to d_model, then mix with Wo. The tabs and tracer below let you play with each stage."
         )
       ));
 
@@ -4054,6 +4658,8 @@ button { font-family: inherit; }
                 ),
                 TQ.note("Each cell = how much the query (row) reads from the key (col). " +
                   "Every row is a softmax, so it sums to ≈1.00 and lives in [0,1]. " +
+                  "(\"Row entropy\" above = how spread-out vs. peaked a row is: low = the head " +
+                  "focuses hard on one key, high = it spreads attention evenly across keys.) " +
                   "Click any row to trace that query through Concat + Wo below.")
               );
 
@@ -4173,7 +4779,8 @@ button { font-family: inherit; }
           "in WHERE they peak, not how " +
           "sharp they are — row entropies here are " +
           ents.map(function (e) { return TQ.fmt(e, 2); }).join(" / ") +
-          " (uniform ceiling ln 6 = " + TQ.fmt(Math.log(n), 2) + "). The bottom UNION row is the elementwise " +
+          " (uniform ceiling ln 6 = " + TQ.fmt(Math.log(n), 2) + " — the entropy a row would have if attention " +
+          "were spread perfectly evenly across all six keys). The bottom UNION row is the elementwise " +
           "max across the ENABLED heads: drop to one head and it collapses to that head's narrow row; enable all " +
           "four and it lights up across keys no single head reached."
         ));
@@ -4303,6 +4910,42 @@ button { font-family: inherit; }
         concatPanel
       );
       renderConcat();
+      // Minimal, correct PyTorch forward pass that maps 1:1 onto this toy:
+      // d_model=16, H=4, dk=4. The (B, n, H, dk) reshape is the batched view
+      // that runs all heads in parallel — exactly what the tracer above showed.
+      concatBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "import torch.nn.functional as F\n" +
+        "\n" +
+        "class MultiHeadAttention(nn.Module):\n" +
+        "    def __init__(self, d_model=16, n_heads=4):\n" +
+        "        super().__init__()\n" +
+        "        self.n_heads = n_heads\n" +
+        "        self.d_k = d_model // n_heads        # 16 // 4 = 4 (this level's dk)\n" +
+        "        self.w_q = nn.Linear(d_model, d_model)   # one (16->16) projection each\n" +
+        "        self.w_k = nn.Linear(d_model, d_model)\n" +
+        "        self.w_v = nn.Linear(d_model, d_model)\n" +
+        "        self.w_o = nn.Linear(d_model, d_model)   # the learned output mixer\n" +
+        "\n" +
+        "    def forward(self, x):                    # x: (B, n, d_model)\n" +
+        "        B, n, _ = x.shape\n" +
+        "        # project, then split d_model into (n_heads, d_k) and move heads up front\n" +
+        "        # (B, n, d_model) -> (B, n, H, d_k) -> (B, H, n, d_k): the batched view\n" +
+        "        q = self.w_q(x).view(B, n, self.n_heads, self.d_k).transpose(1, 2)\n" +
+        "        k = self.w_k(x).view(B, n, self.n_heads, self.d_k).transpose(1, 2)\n" +
+        "        v = self.w_v(x).view(B, n, self.n_heads, self.d_k).transpose(1, 2)\n" +
+        "        # scaled dot-product attention, applied across ALL heads at once\n" +
+        "        scores = q @ k.transpose(-2, -1) / (self.d_k ** 0.5)   # (B, H, n, n)\n" +
+        "        attn = F.softmax(scores, dim=-1)     # one softmax runs all H heads\n" +
+        "        out = attn @ v                       # (B, H, n, d_k)\n" +
+        "        # transpose + reshape back: this IS the concat, width H*d_k = 16 = d_model\n" +
+        "        out = out.transpose(1, 2).reshape(B, n, self.n_heads * self.d_k)\n" +
+        "        return self.w_o(out)                 # (B, n, d_model)\n",
+        { lang: "python", label: "multi-head attention",
+          caption: "The (B, n, H, dk) reshape is the whole trick: one batched softmax runs all H heads in " +
+                   "parallel; transpose+reshape is the concat; w_o is the mixer." }
+      ));
       root.appendChild(concatBlock);
 
       /* --------------------------------------------------- wrap-up takeaway */
@@ -4320,6 +4963,25 @@ button { font-family: inherit; }
           "transformer block — the next level."
         )
       ));
+
+      /* ----------------------------------------------------- go deeper links */
+      root.appendChild(TQ.resources("Go deeper", [
+        { label: "The Illustrated Transformer", kind: "blog",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          note: "the visual walkthrough this level's preread points at — multi-head section" },
+        { label: "3Blue1Brown — Attention, visually explained", kind: "video",
+          url: "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+          note: "geometric intuition for what each head's Q/K/V does" },
+        { label: "Andrej Karpathy — Let's build GPT from scratch", kind: "video",
+          url: "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+          note: "codes the exact (B, n, H, dk) reshape above, from scratch" },
+        { label: "The Annotated Transformer", kind: "code",
+          url: "https://nlp.seas.harvard.edu/annotated-transformer/",
+          note: "line-by-line PyTorch alongside the original paper" },
+        { label: "Attention Is All You Need (§3.2.2, Multi-Head Attention)", kind: "paper",
+          url: "https://arxiv.org/abs/1706.03762",
+          note: "the source — the Concat·Wo formula in its original form" }
+      ]));
 
       /* small scoped styles (colors via CSS vars only — no hardcoded hex) */
       injectOnce("tq-lvl04-css",
@@ -4450,7 +5112,7 @@ button { font-family: inherit; }
     tagline: "Attention is order-blind by default — give it a sense of position.",
     preread: "Illustrated Transformer / Basics",
     objectives: [
-      "Understand self-attention is permutation-invariant (no built-in order)",
+      "Understand self-attention is permutation-equivariant (no built-in order): shuffle the inputs and the outputs just shuffle the same way",
       "Read a sinusoidal PE matrix: positions × dimensions, low dims high-frequency, high dims low-frequency",
       "See that adding PE to an embedding changes the vector, and swapping two words changes their encodings"
     ],
@@ -4466,6 +5128,7 @@ button { font-family: inherit; }
       root.appendChild(TQ.block(
         TQ.h(2, "Attention is a set operation, not a sequence operation"),
         TQ.p(
+          TQ.el("em", { text: "(A set has no order — {cat, sat} is the same as {sat, cat}; a sequence does.) " }),
           "Here's the unsettling fact your CNN intuition won't prepare you for: self-attention has ",
           TQ.el("strong", { text: "no idea what order the tokens are in" }), ". A convolution is hard-wired ",
           "to position — a 3×3 kernel literally reads \"the pixel above-left, above, above-right.\" Locality and ",
@@ -4476,6 +5139,7 @@ button { font-family: inherit; }
         ),
         TQ.p(
           "Formally, attention is ", TQ.el("strong", { text: "permutation-equivariant" }),
+          " (shuffle the inputs and the outputs just shuffle the same way, nothing else changes)",
           ": permute the input rows and you get the exact same outputs, just permuted the same way. An ",
           "unmoved token's output vector is bit-for-bit identical whether the rest of the sentence is in order ",
           "or shuffled. \"The cat sat on the mat\" and \"mat the on sat cat The\" produce the same bag of ",
@@ -4510,23 +5174,62 @@ button { font-family: inherit; }
           ". Read the matrix as positions (rows) × dimensions (columns), where columns pair up ",
           "(0,1),(2,3),… each pair sharing one frequency. Low columns spin fast — column 0 is ",
           TQ.math("sin(pos/1)"), ", a full cycle every ~6 positions — and high columns spin glacially, ",
-          "barely moving across a short sentence. It's a binary-counter-as-waves: fast bits flip every step, ",
-          "slow bits encode coarse position."
+          "barely moving across a short sentence. It's a binary-counter-as-waves: fast (low) dimensions are the ",
+          "ones digit that flips every step, slow (high) dimensions are the high digits that encode coarse position."
         ),
         TQ.p(
           "Two payoffs. (1) It's deterministic and unbounded — position 5000 gets a clean code even if you ",
-          "never trained past 512, so it ", TQ.el("strong", { text: "extrapolates" }), ". (2) The relative ",
-          "offset between two positions is a fixed linear (rotation) function of their PEs, which lets attention ",
-          "learn \"attend 3 tokens back\" as a single pattern — ",
+          "never trained past 512, so it ", TQ.el("strong", { text: "extrapolates" }), ". (2) The gap between two ",
+          "positions always produces the same similarity — so the model can learn \"look k tokens back\" once and ",
+          "reuse it everywhere. (Mathematically, the relative offset is a fixed linear/rotation function of the PEs.) ",
+          "This lets attention learn \"attend 3 tokens back\" as a single pattern — ",
           TQ.el("strong", { text: "see Panel D" }), ", where you slide the absolute position and watch the ",
           "similarity refuse to move."
         ),
         TQ.callout(
-          "This is the fixed, hand-designed scheme. Modern models often skip it for RoPE, which rotates Q and K " +
+          "(Preview — fully covered in L9, nothing to memorize now.) This is the fixed, hand-designed scheme. " +
+          "Modern models often skip it for RoPE, which rotates Q and K " +
           "by position-dependent angles instead of adding anything — and RoPE comes back to bite us in the MLA " +
           "level, where DeepSeek has to carve out a \"decoupled\" RoPE key because rotation doesn't play nicely " +
           "with their latent KV compression."
         )
+      ));
+
+      /* ------- orienting diagram: WHERE PE enters the pipeline (static SVG) ----- */
+      // Panels A-D all zoom INTO PE; none show the embedding -> (+PE) -> attention
+      // dataflow the Takeaway ("input = meaning + position") depends on. Colors via
+      // CSS vars / currentColor only — inherits the dark theme.
+      root.appendChild(TQ.figure(
+        '<svg viewBox="0 0 560 140" width="560" height="140" role="img" ' +
+          'aria-label="Positional encoding is added onto token embeddings before the first attention block" ' +
+          'font-family="var(--mono)" font-size="13">' +
+          '<defs><marker id="tq-l5-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // stage 1: token embeddings
+          '<text x="74" y="34" text-anchor="middle" fill="var(--ink-mute)" font-size="11">token embeddings</text>' +
+          '<rect x="14" y="44" width="120" height="38" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="74" y="68" text-anchor="middle" fill="var(--ink)">embed (n × d)</text>' +
+          // the (+) node
+          '<circle cx="280" cy="63" r="20" fill="var(--panel-hi)" stroke="var(--accent-2)"/>' +
+          '<text x="280" y="69" text-anchor="middle" fill="var(--accent-2)" font-size="20">+</text>' +
+          // stage 3: input to attention
+          '<text x="486" y="34" text-anchor="middle" fill="var(--ink-mute)" font-size="11">input to attention</text>' +
+          '<rect x="426" y="44" width="120" height="38" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="486" y="68" text-anchor="middle" fill="var(--ink)">input (n × d)</text>' +
+          // PE feeding the (+) from below
+          '<rect x="200" y="104" width="160" height="30" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="280" y="123" text-anchor="middle" fill="var(--accent)" font-size="12">PE(pos) — sinusoidal (n × d)</text>' +
+          // arrows
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="138" y1="63" x2="256" y2="63" marker-end="url(#tq-l5-arrow)"/>' +
+            '<line x1="304" y1="63" x2="422" y2="63" marker-end="url(#tq-l5-arrow)"/>' +
+            '<line x1="280" y1="100" x2="280" y2="87" marker-end="url(#tq-l5-arrow)"/>' +
+          '</g>' +
+          '<text x="280" y="34" text-anchor="middle" fill="var(--ink-faint)" font-size="10">elementwise add, d_model unchanged</text>' +
+        '</svg>',
+        "Positional encoding enters once, before the first attention block: each position's sinusoidal vector is " +
+        "added onto its token embedding. Same d_model in, same d_model out — it is added, not concatenated."
       ));
 
       /* ===================================================== PANEL A: PE map */
@@ -4685,6 +5388,32 @@ button { font-family: inherit; }
         "Drag dimension from 0 upward and the wave stretches out. Dim 0 completes a full cycle in ~6 positions; " +
         "by dim 14 the wavelength is ~19,000 positions, so it's essentially flat across one sentence. Low dims = " +
         "fine position, high dims = coarse position — together they pin down an exact slot, like bits of a counter."
+      ));
+      // Minimal, correct PyTorch that reproduces exactly the matrix drawn above —
+      // the same formula TQ.sinusoidalPE(n, d) implements, then added to embeddings.
+      panelA.appendChild(TQ.code(
+        "import torch, math\n" +
+        "\n" +
+        "def sinusoidal_pe(n_pos, d_model):\n" +
+        "    # PE[pos, 2i]   = sin(pos / 10000**(2i/d))\n" +
+        "    # PE[pos, 2i+1] = cos(pos / 10000**(2i/d))\n" +
+        "    pos = torch.arange(n_pos).unsqueeze(1)          # (n_pos, 1)\n" +
+        "    i   = torch.arange(0, d_model, 2)               # even indices 0,2,4,...\n" +
+        "    div = torch.pow(10000, i / d_model)             # one frequency per pair\n" +
+        "    pe = torch.zeros(n_pos, d_model)\n" +
+        "    pe[:, 0::2] = torch.sin(pos / div)              # even dims -> sin\n" +
+        "    pe[:, 1::2] = torch.cos(pos / div)              # odd dims  -> cos\n" +
+        "    return pe\n" +
+        "\n" +
+        "n_pos, d_model = 6, 16\n" +
+        "pe = sinusoidal_pe(n_pos, d_model)   # (6, 16) - exactly the heatmap in Panel A\n" +
+        "\n" +
+        "# add it onto the token embeddings (NOT concatenate): same d_model\n" +
+        "input_embeddings = token_embeddings + pe   # input = meaning + position\n",
+        { lang: "python", label: "sinusoidal positional encoding",
+          caption: "This is TQ.sinusoidalPE(n, d) with n = 6, d = 16 — the same peRows this level adds to the toy " +
+                   "embeddings. div = 10000**(2i/d) is the per-pair wavelength Panel A's slider sweeps. Note the last " +
+                   "line uses '+ pe' (not concat), which is why d_model stays 16." }
       ));
       refreshHeatA();
       refreshWaveInfo();
@@ -5138,6 +5867,40 @@ button { font-family: inherit; }
                    "Everything attention does downstream now has order to work with.")
       ));
 
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — positional encoding", [
+        {
+          label: "Kazemnejad — Transformer positional encoding",
+          url: "https://kazemnejad.com/blog/transformer_architecture_positional_encoding/",
+          kind: "blog",
+          note: "The clearest derivation of why sin/cos pairs make relative position fall out as a fixed rotation — Panel D, explained."
+        },
+        {
+          label: "The Annotated Transformer (PE in code)",
+          url: "https://nlp.seas.harvard.edu/annotated-transformer/",
+          kind: "code",
+          note: "Harvard's line-by-line PyTorch — its PositionalEncoding module is the real version of the Panel A snippet."
+        },
+        {
+          label: "Attention Is All You Need (original sinusoidal PE, §3.5)",
+          url: "https://arxiv.org/abs/1706.03762",
+          kind: "paper",
+          note: "The source. Section 3.5 introduces exactly the sin/cos formula this level plots."
+        },
+        {
+          label: "Illustrated Transformer — where PE fits in the stack",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          kind: "blog",
+          note: "Visual tour that shows the embedding + PE step sitting in front of the first attention block."
+        },
+        {
+          label: "RoFormer / RoPE — going deeper than additive PE",
+          url: "https://arxiv.org/abs/2104.09864",
+          kind: "paper",
+          note: "The rotary alternative previewed in the callouts; returns in the L9 (MLA) level."
+        }
+      ]));
+
       /* scoped styles (colors only via CSS vars / TQ.colorFor — no hardcoded hex) */
       injectOnce("tq-lvl05-css",
         ".tq-pe-arow{align-items:flex-start;gap:20px}" +
@@ -5168,7 +5931,8 @@ button { font-family: inherit; }
           "It changes only if the swapped words were adjacent"
         ],
         answer: 0,
-        explain: "Self-attention is permutation-equivariant: it's a content-weighted average over a set. An " +
+        explain: "Self-attention is permutation-equivariant (shuffle the inputs, the outputs just shuffle the same " +
+                 "way): it's a content-weighted average over a set. An " +
                  "unmoved token sees the same multiset of keys/values, so its output is identical. That " +
                  "order-blindness is exactly why PE is needed."
       },
@@ -5339,6 +6103,60 @@ button { font-family: inherit; }
         TQ.callout(
           "CNN bridge: residual = skip connection (ResNet, 2015). The block learns x + (a small correction), " +
           "not x replaced. That's why gradients reach the bottom of a very deep stack."
+        ),
+        // Static topology skeleton: the WIRING a beginner should see before the
+        // 7-stage stepper walks values through linearly. Colors via CSS vars /
+        // currentColor only (no hardcoded hex); arrowhead marker like L1's.
+        TQ.figure(
+          '<svg viewBox="0 0 300 320" width="300" height="320" role="img" ' +
+            'aria-label="Transformer block topology: input branches into a residual skip and a sub-layer, ' +
+            'merging at Add and Norm, twice" ' +
+            'font-family="var(--mono)" font-size="11">' +
+            '<defs><marker id="tq-l6-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+              'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+            '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--line)">' +
+              // backbone bottom -> up
+              '<line x1="150" y1="300" x2="150" y2="262"/>' +
+              '<line x1="150" y1="214" x2="150" y2="176" marker-end="url(#tq-l6-arrow)"/>' +
+              '<line x1="150" y1="152" x2="150" y2="118"/>' +
+              '<line x1="150" y1="70" x2="150" y2="34" marker-end="url(#tq-l6-arrow)"/>' +
+            '</g>' +
+            // residual bypass arcs (skip connections) drawn in accent
+            '<g stroke="var(--accent-2)" stroke-width="1.5" fill="none">' +
+              '<path d="M150 262 C 250 250, 250 200, 188 188" marker-end="url(#tq-l6-arrow)" color="var(--accent-2)"/>' +
+              '<path d="M150 118 C 250 106, 250 56, 188 44" marker-end="url(#tq-l6-arrow)" color="var(--accent-2)"/>' +
+            '</g>' +
+            // input x
+            '<text x="150" y="316" text-anchor="middle" fill="var(--ink)">x</text>' +
+            // MHA sub-layer box
+            '<rect x="62" y="238" width="120" height="26" rx="6" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="122" y="255" text-anchor="middle" fill="var(--ink)">MHA</text>' +
+            // branch line into MHA
+            '<line x1="150" y1="276" x2="122" y2="264" stroke="currentColor" stroke-width="1.5" ' +
+              'color="var(--line)"/>' +
+            // Add & Norm #1
+            '<rect x="92" y="176" width="116" height="26" rx="6" fill="var(--panel-hi)" stroke="var(--accent-2)"/>' +
+            '<text x="150" y="193" text-anchor="middle" fill="var(--ink)">Add &amp; Norm</text>' +
+            // z label
+            '<text x="166" y="140" text-anchor="start" fill="var(--ink-mute)">z</text>' +
+            // FFN sub-layer box
+            '<rect x="62" y="94" width="120" height="26" rx="6" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="122" y="111" text-anchor="middle" fill="var(--ink)">FFN</text>' +
+            '<line x1="150" y1="132" x2="122" y2="120" stroke="currentColor" stroke-width="1.5" ' +
+              'color="var(--line)"/>' +
+            // Add & Norm #2
+            '<rect x="92" y="32" width="116" height="26" rx="6" fill="var(--panel-hi)" stroke="var(--accent-2)"/>' +
+            '<text x="150" y="49" text-anchor="middle" fill="var(--ink)">Add &amp; Norm</text>' +
+            // out label
+            '<text x="150" y="20" text-anchor="middle" fill="var(--good)">out: same shape as x</text>' +
+            // skip labels
+            '<text x="262" y="228" text-anchor="middle" fill="var(--accent-2)" font-size="10">residual</text>' +
+            '<text x="262" y="240" text-anchor="middle" fill="var(--accent-2)" font-size="10">(skip)</text>' +
+            '<text x="262" y="84" text-anchor="middle" fill="var(--accent-2)" font-size="10">residual</text>' +
+            '<text x="262" y="96" text-anchor="middle" fill="var(--accent-2)" font-size="10">(skip)</text>' +
+          '</svg>',
+          "Two sub-layers, each wrapped in a residual + LayerNorm. The skip arrows are why a 100-layer stack still trains."
         )
       ));
 
@@ -5361,7 +6179,7 @@ button { font-family: inherit; }
         TQ.p(
           "So for a single ", TQ.math("d_model = " + d), " vector, LayerNorm forces those ", String(d),
           " numbers to have ", TQ.el("strong", { text: "mean 0 and variance 1" }),
-          " (then applies learned gain γ and bias β, here 1 and 0). The residual sum ",
+          " (then applies a learned scale (gamma, γ) and shift (bias β), here 1 and 0). The residual sum ",
           TQ.math("x + sublayer(x)"), " can blow up the scale; LayerNorm immediately tames it back. ",
           "In the walkthrough below you'll watch the mean and variance go from messy to exactly 0 and 1 — ",
           TQ.el("strong", { text: "computed, not asserted" }), "."
@@ -5377,12 +6195,11 @@ button { font-family: inherit; }
         ),
         TQ.p(
           "Two things make it transformer-flavored. First, it's ", TQ.el("strong", { text: "position-wise" }),
-          ": the SAME W1, W2 are applied at every position, like a 1×1 convolution sliding over the sequence " +
-          "(shared weights, applied independently per location). Attention is the only place tokens talk; the " +
-          "FFN is purely local per-token computation. Second, it ",
+          ": the SAME W1, W2 are applied at every position — the same little network re-run at each token, " +
+          "like a 1×1 convolution sliding over the sequence (shared weights, applied independently per location). " +
+          "Attention is the only place tokens talk; the FFN is purely local per-token computation. Second, it ",
           TQ.el("strong", { text: "expands then contracts" }),
-          " — the hidden layer is typically ~4× d_model (GPT-2/GPT-3 are exactly 4×; Llama-2-7B is " +
-          "4096→11008, ~2.7×, because its SwiGLU trims the hidden size to pay for an extra gate matrix), " +
+          " — the hidden layer is typically ~4× d_model (GPT-2/GPT-3 are exactly 4×), " +
           "so despite being 'just an MLP' it holds roughly two-thirds of a transformer's parameters. Attention ",
           TQ.el("strong", { text: "routes" }), " information; the FFN is where the model ",
           TQ.el("strong", { text: "stores and transforms" }), " what it knows."
@@ -5390,6 +6207,48 @@ button { font-family: inherit; }
         TQ.note(
           "Modern models often swap ReLU for GELU/SwiGLU and put LayerNorm BEFORE each sub-layer " +
           "('pre-LN') for steadier gradients. We use the original post-LN here so the ordering is concrete."
+        ),
+        TQ.note(
+          "Aside (expert): Llama-2-7B's FFN is 4096→11008, only ~2.7× rather than the usual 4×, because its " +
+          "SwiGLU variant trims the hidden size to pay for an extra gate matrix. Same expand-then-contract idea."
+        ),
+        // Consolidate MHA + Add&Norm + FFN into ONE runnable forward before the
+        // reader enters the 7-stage stepper. Pre-norm (ln BEFORE each sub-layer)
+        // to match the pre-LN aside above; the live walkthrough animates post-LN.
+        TQ.code(
+          "import torch\n" +
+          "import torch.nn as nn\n" +
+          "\n" +
+          "class TransformerBlock(nn.Module):\n" +
+          "    def __init__(self, d_model, n_heads):\n" +
+          "        super().__init__()\n" +
+          "        self.ln1 = nn.LayerNorm(d_model)\n" +
+          "        self.ln2 = nn.LayerNorm(d_model)\n" +
+          "        self.attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True)\n" +
+          "        self.ffn = nn.Sequential(\n" +
+          "            nn.Linear(d_model, 4 * d_model),  # expand\n" +
+          "            nn.GELU(),\n" +
+          "            nn.Linear(4 * d_model, d_model),  # contract\n" +
+          "        )\n" +
+          "\n" +
+          "    def forward(self, x, attn_mask=None):\n" +
+          "        # pre-norm: LayerNorm BEFORE each sub-layer, residual add AFTER\n" +
+          "        h = self.ln1(x)\n" +
+          "        a, _ = self.attn(h, h, h, attn_mask=attn_mask)  # self-attn: q=k=v=h\n" +
+          "        x = x + a                                       # residual #1\n" +
+          "        x = x + self.ffn(self.ln2(x))                   # residual #2\n" +
+          "        return x                                        # same shape as input\n" +
+          "\n" +
+          "# encoder block -> no mask (every token sees every token):\n" +
+          "#   out = block(x)\n" +
+          "# decoder block -> causal mask (each token sees only itself + earlier):\n" +
+          "#   mask = nn.Transformer.generate_square_subsequent_mask(x.size(1))\n" +
+          "#   out = block(x, attn_mask=mask)\n",
+          { lang: "python", label: "one transformer block (pre-norm)",
+            caption: "Pre-LN: x = x + attn(ln1(x)); x = x + ffn(ln2(x)). The FFN expands 4x then contracts " +
+              "(real models use ~4x; the live viz uses 2x for legible cells). The encoder/decoder contrast is " +
+              "just the attn_mask. Note: this is pre-LN — the live walkthrough animates the original post-LN " +
+              "(LayerNorm AFTER each sub-layer), so the two differ only in where the norm sits." }
         )
       ));
 
@@ -5520,9 +6379,10 @@ button { font-family: inherit; }
               }));
               c.appendChild(vv(data.a, "MHA(x)"));
               c.appendChild(TQ.note(
-                "For legibility this block runs a single full-width head (dk = d_model, Wo = identity); the " +
-                "Concat-then-Wo machinery from Level 4 (dk = d_model / H, then a learned output projection) would " +
-                "slot in here unchanged and produce the same d_model-wide output."
+                "For legibility this block runs a single full-width head (dk = d_model, Wo = identity) — " +
+                "i.e. one head spanning all " + d + " dims just to keep the picture simple; real models split into " +
+                "several. The Concat-then-Wo machinery from Level 4 (dk = d_model / H heads, then a learned output " +
+                "projection) would slot in here unchanged and produce the same d_model-wide output."
               ));
               c.appendChild(TQ.note(
                 "Every later stage is per-token: it never looks at the other five tokens again."
@@ -5546,7 +6406,7 @@ button { font-family: inherit; }
             run: function (c) {
               c.appendChild(TQ.p(
                 "Normalize across the token's own ", String(d),
-                " features: subtract the mean, divide by the std, apply γ=1, β=0. Watch the stats ",
+                " features: subtract the mean, divide by the std, apply the learned scale γ=1 and shift β=0. Watch the stats ",
                 TQ.el("strong", { text: "snap" }), " to mean 0, var 1 — computed from the numbers, not asserted."
               ));
               c.appendChild(TQ.el("div", { class: "tq-tb-residual" },
@@ -5987,6 +6847,27 @@ button { font-family: inherit; }
         )
       ));
 
+      /* ------------------------------------------------ go deeper (external) */
+      root.appendChild(TQ.block(
+        TQ.resources("Go deeper", [
+          { label: "The Illustrated Transformer", kind: "blog",
+            url: "https://jalammar.github.io/illustrated-transformer/",
+            note: "the visual capstone — full encoder-decoder block, step by step" },
+          { label: "Attention Is All You Need", kind: "paper",
+            url: "https://arxiv.org/abs/1706.03762",
+            note: "the original encoder-decoder + post-LN block this level walks through" },
+          { label: "On Layer Normalization in the Transformer (Pre-LN vs Post-LN)", kind: "paper",
+            url: "https://arxiv.org/abs/2002.04745",
+            note: "why modern models move LayerNorm before each sub-layer" },
+          { label: "BERT (encoder-only)", kind: "paper",
+            url: "https://arxiv.org/abs/1810.04805",
+            note: "bidirectional self-attention, no mask" },
+          { label: "T5 (encoder-decoder)", kind: "paper",
+            url: "https://arxiv.org/abs/1910.10683",
+            note: "the cross-attention architecture from the grid above" }
+        ])
+      ));
+
       /* scoped styles — colors via CSS variables only, no hardcoded hex */
       injectOnce("tq-lvl06-css",
         ".tq-block-controls{align-items:flex-start;gap:22px;flex-wrap:wrap;margin:6px 0 14px}" +
@@ -6169,6 +7050,7 @@ button { font-family: inherit; }
           "A CNN sees the whole image at once: one forward pass, done. An ",
           TQ.el("strong", { text: "autoregressive decoder" }),
           " is different — it produces text one token per step, and each new token is fed back in as input for the next step. ",
+          "(", TQ.el("em", { text: "Autoregressive" }), " just means each output token becomes part of the input for the next step.) ",
           "At step ", TQ.math("t"), " the model has the sequence so far (", TQ.math("t"),
           " tokens) and computes a single new token, ", TQ.math("t+1"), "."
         ),
@@ -6177,9 +7059,61 @@ button { font-family: inherit; }
           ", attention lets that position look at every ", TQ.el("strong", { text: "earlier" }),
           " position — but never a later one (there is none yet). This \"only look left\" rule is ",
           TQ.el("strong", { text: "causal masking" }),
-          ": future positions are masked out (set to −∞ before softmax, so their weight is 0). ",
+          ": future positions are masked out (set to −∞ before softmax — because ", TQ.math("e^(−∞) = 0"),
+          ", that position gets exactly zero weight). ",
           "It's the architectural reason a language model can be trained to predict the next word without cheating by peeking ahead."
         )
+      ));
+
+      // Orienting diagram: the step-and-feedback LOOP at a glance — the one thing
+      // the single-step sandbox below does not make obvious. Static inline SVG,
+      // colors via CSS vars / currentColor only (no hardcoded hex).
+      root.appendChild(TQ.figure(
+        '<svg viewBox="0 0 560 132" width="560" height="132" role="img" ' +
+          'aria-label="Autoregressive generation loop: token t is projected to q,k,v; k,v are appended to the KV cache; the query attends over the cache to produce an output; the next token is sampled and fed back" ' +
+          'font-family="var(--mono)" font-size="11">' +
+          '<defs><marker id="tq-l7-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // stage 1: input token t
+          '<rect x="8" y="40" width="86" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="51" y="61" text-anchor="middle" fill="var(--ink)">token t</text>' +
+          // stage 2: project q,k,v
+          '<rect x="120" y="40" width="96" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="168" y="56" text-anchor="middle" fill="var(--ink)">project</text>' +
+          '<text x="168" y="69" text-anchor="middle" fill="var(--ink-mute)" font-size="10">q_t, k_t, v_t</text>' +
+          // stage 3: KV cache (stack of past columns + 1 new highlighted column)
+          '<text x="294" y="30" text-anchor="middle" fill="var(--ink-mute)" font-size="10">append k_t,v_t → KV-cache</text>' +
+          '<rect x="246" y="40" width="14" height="34" rx="2" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<rect x="262" y="40" width="14" height="34" rx="2" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<rect x="278" y="40" width="14" height="34" rx="2" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<rect x="294" y="40" width="14" height="34" rx="2" fill="var(--accent)" stroke="var(--accent)"/>' +
+          '<text x="301" y="88" text-anchor="middle" fill="var(--accent)" font-size="9">new col</text>' +
+          // stage 4: attend -> out
+          '<rect x="338" y="40" width="96" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="386" y="56" text-anchor="middle" fill="var(--ink)">attend</text>' +
+          '<text x="386" y="69" text-anchor="middle" fill="var(--ink-mute)" font-size="10">q_t over cache → out</text>' +
+          // stage 5: sample next token
+          '<rect x="458" y="40" width="94" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="505" y="56" text-anchor="middle" fill="var(--ink)">sample</text>' +
+          '<text x="505" y="69" text-anchor="middle" fill="var(--ink-mute)" font-size="10">token t+1</text>' +
+          // forward arrows
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="96" y1="57" x2="116" y2="57" marker-end="url(#tq-l7-arrow)"/>' +
+            '<line x1="218" y1="57" x2="242" y2="57" marker-end="url(#tq-l7-arrow)"/>' +
+            '<line x1="310" y1="57" x2="334" y2="57" marker-end="url(#tq-l7-arrow)"/>' +
+            '<line x1="436" y1="57" x2="456" y2="57" marker-end="url(#tq-l7-arrow)"/>' +
+          '</g>' +
+          // curved feedback arrow: token t+1 loops back to the input box
+          '<g stroke="var(--accent)" stroke-width="1.5" fill="none" color="var(--accent)">' +
+            '<path d="M505 76 C505 116, 51 116, 51 78" marker-end="url(#tq-l7-arrow)"/>' +
+          '</g>' +
+          '<text x="280" y="128" text-anchor="middle" fill="var(--accent)" font-size="10">feed back / next step</text>' +
+          // note: only k,v are stored
+          '<text x="294" y="18" text-anchor="middle" fill="var(--ink-faint)" font-size="10">only k,v are stored — q_t is discarded after this step</text>' +
+        '</svg>',
+        "Autoregressive generation is a loop: project the new token to q,k,v; append only k,v to the KV-cache; " +
+        "let the query attend over the whole cache; sample the next token and feed it back. The sandbox below shows ONE turn of this loop."
       ));
 
       root.appendChild(TQ.block(
@@ -6187,7 +7121,8 @@ button { font-family: inherit; }
         TQ.p(
           "Recall self-attention: each token projects its embedding into a query ", TQ.math("q"),
           ", a key ", TQ.math("k"), ", and a value ", TQ.math("v"),
-          " (", TQ.math("Q=XWq, K=XWk, V=XWv"), "). To produce the next token at step ", TQ.math("t"),
+          " (", TQ.math("Q=XWq, K=XWk, V=XWv"),
+          " — i.e. multiply each embedding by a learned matrix, recap from L3). To produce the next token at step ", TQ.math("t"),
           ", you only need the NEW token's query ", TQ.math("q_t"),
           ". That ", TQ.math("q_t"), " dot-products against the keys of ALL tokens, softmaxes, and reads out a weighted sum of their values."
         ),
@@ -6448,6 +7383,75 @@ button { font-family: inherit; }
       redraw();
       root.appendChild(sandbox);
 
+      /* ---------------------------------- the loop above, as real PyTorch code */
+      root.appendChild(TQ.block(
+        TQ.h(2, "The same loop, in code"),
+        TQ.p(
+          "Here is the sandbox as raw PyTorch — framework-light matmuls so the cache mechanics aren't hidden. ",
+          "Each ", TQ.el("strong", { text: "Generate next token" }), " click runs one iteration of ", TQ.math("generate_with_cache"),
+          ": the new column appended to ", TQ.math("K_cache"), "/", TQ.math("V_cache"),
+          " is exactly the new heatmap column you watched grow above. The ", TQ.math("naive_no_cache"),
+          " contrast reprojects K and V for the WHOLE prefix every step — the wasted ", TQ.math("~T²/2"), " vs ", TQ.math("~T"), " work, made visible."
+        ),
+        TQ.code(
+          "import torch\n" +
+          "import torch.nn.functional as F\n" +
+          "\n" +
+          "# learned projections (recap from L3); dk = head_dim\n" +
+          "d_model, dk = 16, 4\n" +
+          "Wq = torch.randn(d_model, dk)\n" +
+          "Wk = torch.randn(d_model, dk)\n" +
+          "Wv = torch.randn(d_model, dk)\n" +
+          "\n" +
+          "def step(x_t, K_cache, V_cache):\n" +
+          "    # 1. project ONLY the new token  x_t: (d_model,)\n" +
+          "    q_t = x_t @ Wq                       # (dk,)\n" +
+          "    k_t = x_t @ Wk                       # (dk,)\n" +
+          "    v_t = x_t @ Wv                       # (dk,)\n" +
+          "\n" +
+          "    # 2. append k_t, v_t as a new row/column of the cache\n" +
+          "    K_cache = torch.cat([K_cache, k_t[None, :]], dim=0)  # (t, dk)\n" +
+          "    V_cache = torch.cat([V_cache, v_t[None, :]], dim=0)  # (t, dk)\n" +
+          "\n" +
+          "    # 3. the single new query attends over the WHOLE cache\n" +
+          "    scores = q_t @ K_cache.T / (dk ** 0.5)              # (t,)\n" +
+          "    weights = F.softmax(scores, dim=-1)                 # (t,) causal for free\n" +
+          "    out = weights @ V_cache                             # (dk,)\n" +
+          "    return out, K_cache, V_cache\n" +
+          "\n" +
+          "def generate_with_cache(embeds, n_new):\n" +
+          "    # embeds: (prompt_len, d_model). Cache grows one column per step.\n" +
+          "    K_cache = embeds @ Wk                 # prefill: (prompt_len, dk)\n" +
+          "    V_cache = embeds @ Wv                 # the whole prompt is now cached\n" +
+          "    # the last prompt position already gave us its q; sample the FIRST new\n" +
+          "    # token from it (its k,v are already in the cache -- don't re-append).\n" +
+          "    q_last = embeds[-1] @ Wq                            # (dk,)\n" +
+          "    scores = q_last @ K_cache.T / (dk ** 0.5)          # (prompt_len,)\n" +
+          "    out = F.softmax(scores, dim=-1) @ V_cache          # (dk,)\n" +
+          "    x_t = next_embed(out)                 # first generated token\n" +
+          "    for _ in range(n_new):\n" +
+          "        # x_t is a genuinely NEW token: project it once, append, attend.\n" +
+          "        out, K_cache, V_cache = step(x_t, K_cache, V_cache)\n" +
+          "        x_t = next_embed(out)             # sample/argmax -> feed back\n" +
+          "    return K_cache                        # 1 (k,v) projection per step -> ~T total\n" +
+          "\n" +
+          "def naive_no_cache(embeds, n_new):\n" +
+          "    # WITHOUT a cache: every step recomputes K, V for the ENTIRE prefix.\n" +
+          "    X = embeds\n" +
+          "    for _ in range(n_new):\n" +
+          "        K = X @ Wk                        # (t, dk) re-derived from scratch\n" +
+          "        V = X @ Wv                        # (t, dk) re-derived from scratch\n" +
+          "        q_t = (X[-1] @ Wq)                # only the last query is used\n" +
+          "        weights = F.softmax(q_t @ K.T / (dk ** 0.5), dim=-1)\n" +
+          "        out = weights @ V\n" +
+          "        X = torch.cat([X, next_embed(out)[None, :]], dim=0)\n" +
+          "    # K,V recomputed for 1+2+...+T tokens -> ~T**2/2 projections of pure waste\n",
+          { lang: "python", label: "KV-cache generation loop",
+            caption: "Each Generate-next-token click = one call to step(): the appended row of K_cache/V_cache is the new heatmap column above. " +
+                     "naive_no_cache reprojects the whole prefix every step — the quadratic waste the cache removes." }
+        )
+      ));
+
       /* ----------------------------------------- causal mask grid (the rule) */
       var maskBlock = TQ.block(
         TQ.h(2, "Why \"only look left\" comes for free"),
@@ -6483,7 +7487,8 @@ button { font-family: inherit; }
         TQ.p(
           "Caching trades recompute for storage, and the storage grows with everything: ",
           TQ.math("cache_bytes = 2 · n_layers · seq_len · n_kv_heads · head_dim · bytes"),
-          " (the 2 is K and V). It scales linearly with sequence length, so a 100k-token context is a genuinely large, " +
+          " (the 2 is K and V; don't worry about ", TQ.math("n_kv_heads"),
+          " yet — that term is exactly what the next level unpacks). It scales linearly with sequence length, so a 100k-token context is a genuinely large, " +
           "ever-growing tensor in GPU memory — often dwarfing the model weights for long contexts. ",
           "That's the real bottleneck of LLM serving: not FLOPs, but KV-cache memory."
         )
@@ -6540,6 +7545,40 @@ button { font-family: inherit; }
       memBlock.appendChild(memOut);
       updateMem();
       root.appendChild(memBlock);
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — generation & the KV cache", [
+        {
+          label: "kipply — Transformer Inference Arithmetic",
+          url: "https://kipply.github.io/transformer-inference-arithmetic/",
+          kind: "blog",
+          note: "Works out the actual KV-cache byte budget and why memory, not FLOPs, bounds long-context serving."
+        },
+        {
+          label: "Andrej Karpathy — Let's build GPT from scratch",
+          url: "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+          kind: "video",
+          note: "Builds a decoder end to end, including the causal mask and autoregressive generation loop."
+        },
+        {
+          label: "Andrej Karpathy — nanoGPT",
+          url: "https://github.com/karpathy/nanoGPT",
+          kind: "code",
+          note: "A clean, readable GPT with a real generate() loop — see the cache and sampling in production-style code."
+        },
+        {
+          label: "The Annotated Transformer",
+          url: "https://nlp.seas.harvard.edu/annotated-transformer/",
+          kind: "code",
+          note: "Line-by-line transformer with the attention + masking math you just clicked through."
+        },
+        {
+          label: "The Illustrated Transformer",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          kind: "blog",
+          note: "Jay Alammar's visual walkthrough of Q/K/V attention — the projections this cache stores."
+        }
+      ]));
 
       /* ---------------------------------------------------- wrap-up takeaway */
       root.appendChild(TQ.block(
@@ -6687,7 +7726,8 @@ button { font-family: inherit; }
           "At inference a transformer generates ", TQ.el("strong", { text: "one token at a time" }),
           ". For every new token, attention needs the Keys and Values of ",
           TQ.el("em", { text: "every previous token" }),
-          " — recomputing them each step would be quadratic suicide. So we cache them: the ",
+          " — and recomputing all of those past Keys and Values from scratch for every new token would cost ",
+          "on the order of seq_len² work (you'd redo the whole history each step). So we cache them instead: the ",
           TQ.el("strong", { text: "KV cache" }),
           ". It grows linearly with context length, and is stored per layer, for both K and V."
         ),
@@ -6698,14 +7738,69 @@ button { font-family: inherit; }
           "The load-bearing subtlety: cache size depends on the number of KEY/VALUE heads, " +
           "NOT the number of QUERY heads. Queries are computed fresh each step and thrown away — " +
           "they're never cached. Keys and Values are what you pay rent on. That asymmetry is the whole trick."
+        ),
+        // Static orienting figure: WHERE the KV cache lives and WHY it grows,
+        // before the interactive wiring canvas (which assumes you know this).
+        // Theme colors only via CSS vars / currentColor — no hardcoded hex.
+        TQ.figure(
+          '<svg viewBox="0 0 560 130" width="560" height="130" role="img" ' +
+            'aria-label="Decode loop: past tokens store K,V into the per-layer KV cache; a new token attends back to all of them and appends its own K,V" ' +
+            'font-family="var(--mono)" font-size="12">' +
+            '<defs><marker id="tq-l8-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+              'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+            // the KV cache box (per layer)
+            '<text x="200" y="20" text-anchor="middle" fill="var(--ink-mute)" font-size="11">KV cache (per layer)</text>' +
+            '<rect x="24" y="30" width="352" height="44" rx="9" fill="var(--panel-hi)" ' +
+              'stroke="var(--line)"/>' +
+            // four stored [K,V] slots for past tokens t1..t4
+            '<g>' +
+              '<rect x="38" y="40" width="70" height="24" rx="5" fill="none" stroke="var(--cool-deep)"/>' +
+              '<text x="73" y="56" text-anchor="middle" fill="var(--ink-soft)">t1 [K,V]</text>' +
+              '<rect x="118" y="40" width="70" height="24" rx="5" fill="none" stroke="var(--cool-deep)"/>' +
+              '<text x="153" y="56" text-anchor="middle" fill="var(--ink-soft)">t2 [K,V]</text>' +
+              '<rect x="198" y="40" width="70" height="24" rx="5" fill="none" stroke="var(--cool-deep)"/>' +
+              '<text x="233" y="56" text-anchor="middle" fill="var(--ink-soft)">t3 [K,V]</text>' +
+              '<rect x="278" y="40" width="70" height="24" rx="5" fill="none" stroke="var(--cool-deep)"/>' +
+              '<text x="313" y="56" text-anchor="middle" fill="var(--ink-soft)">t4 [K,V]</text>' +
+            '</g>' +
+            // the appended slot for the new token t5
+            '<rect x="392" y="40" width="70" height="24" rx="5" fill="none" ' +
+              'stroke="var(--accent-2)" stroke-dasharray="4 3"/>' +
+            '<text x="427" y="56" text-anchor="middle" fill="var(--accent-2)">t5 [K,V]</text>' +
+            '<text x="427" y="80" text-anchor="middle" fill="var(--ink-faint)" font-size="10">appended</text>' +
+            // new token t5 at generation time
+            '<rect x="468" y="92" width="74" height="26" rx="6" fill="var(--panel-hi)" ' +
+              'stroke="var(--accent-2)"/>' +
+            '<text x="505" y="109" text-anchor="middle" fill="var(--accent-2)">new tok t5</text>' +
+            // attention arrows: t5 reads back from every cached K,V
+            '<g stroke="currentColor" stroke-width="1.4" fill="none" color="var(--ink-faint)">' +
+              '<path d="M470 100 C 300 110, 110 96, 73 66" marker-end="url(#tq-l8-arrow)"/>' +
+              '<path d="M474 100 C 320 112, 180 96, 153 66" marker-end="url(#tq-l8-arrow)"/>' +
+              '<path d="M478 100 C 360 112, 250 96, 233 66" marker-end="url(#tq-l8-arrow)"/>' +
+              '<path d="M482 100 C 400 110, 320 96, 313 66" marker-end="url(#tq-l8-arrow)"/>' +
+            '</g>' +
+            '<text x="250" y="124" text-anchor="middle" fill="var(--ink-faint)" font-size="10">' +
+              't5 attends back to every cached K,V</text>' +
+          '</svg>',
+          "Decode time: each past token left one [K,V] slot in the per-layer cache. The new token " +
+          "attends back to all of them, then appends its own [K,V]. The cache grows by one slot per token " +
+          "per layer — and n_kv (not n_q) sets each slot's width."
         )
       ));
 
       root.appendChild(TQ.block(
         TQ.h(2, "Three ways to wire query heads to KV heads"),
         TQ.p(
-          "Think back to grouped / depthwise convolution (splitting channels into independent groups) — ",
-          "same structural move, different axis. Here we're grouping the ", TQ.el("strong", { text: "attention heads" }), "."
+          "Quick vocabulary: a transformer splits attention into ", TQ.el("strong", { text: "n_q query heads" }),
+          ", each working in a slice of the model called ", TQ.el("strong", { text: "head_dim" }),
+          " (typically head_dim = d_model / n_heads). ",
+          TQ.el("strong", { text: "n_kv" }), " is how many distinct Key/Value heads we keep — the lever this level is about. ",
+          "The three variants below just change how query heads are wired to those KV heads."
+        ),
+        TQ.note(
+          "Optional analogy for the CNN-fluent: this is the same structural move as grouped / depthwise " +
+          "convolution (splitting channels into independent groups), just applied to attention heads instead of channels."
         ),
         TQ.el("ul", { class: "tq-mode-list" },
           TQ.el("li", {},
@@ -6714,13 +7809,58 @@ button { font-family: inherit; }
           TQ.el("li", {},
             TQ.el("strong", { text: "MQA (Multi-Query): " }),
             "n_kv = 1. ALL query heads share one K/V. Cache shrinks by a factor of n_q (e.g. 64×). " +
-            "Cheapest — but funnelling every head through one key space can measurably hurt quality " +
-            "(PaLM noted small-but-real degradation and training instability)."),
+            "Cheapest — but forcing every query head to read from one shared K/V can measurably hurt quality " +
+            "(Google's PaLM model noted small-but-real degradation and training instability)."),
           TQ.el("li", {},
             TQ.el("strong", { text: "GQA (Grouped-Query): " }),
             "n_kv = g, with 1 < g < n_q. Query heads are partitioned into g groups; each shares one K/V. " +
             "It interpolates exactly between MHA (g = n_q) and MQA (g = 1). Llama-2 70B and Llama-3 use " +
             "GQA with 8 KV heads — the sweet spot. Savings vs MHA = ", TQ.math("1 − n_kv/n_q"), ".")
+        )
+      ));
+
+      /* ---- the same idea, grounded in real PyTorch (code precedes play) --- */
+      root.appendChild(TQ.block(
+        TQ.h(2, "The same idea in PyTorch"),
+        TQ.p(
+          "All three variants are ", TQ.el("strong", { text: "one" }), " head-projection with a single knob, ",
+          TQ.math("n_kv_heads"), ". Notice K and V are projected to ", TQ.el("strong", { text: "fewer" }),
+          " heads than Q — that smaller projection is exactly what shrinks the cache."
+        ),
+        TQ.code(
+          "import torch\n" +
+          "import torch.nn as nn\n" +
+          "import torch.nn.functional as F\n" +
+          "\n" +
+          "d_model, n_q_heads, d_head = 4096, 32, 128\n" +
+          "\n" +
+          "# the one knob that picks the variant:\n" +
+          "#   MHA -> n_q_heads (32) | MQA -> 1 | GQA -> groups (e.g. 8)\n" +
+          "# for GQA: 1 < n_kv_heads < n_q_heads, and it must divide n_q_heads evenly\n" +
+          "n_kv_heads = 8\n" +
+          "\n" +
+          "# Q is projected to all query heads; K and V to only n_kv_heads (smaller!)\n" +
+          "q_proj = nn.Linear(d_model, n_q_heads  * d_head, bias=False)\n" +
+          "k_proj = nn.Linear(d_model, n_kv_heads * d_head, bias=False)\n" +
+          "v_proj = nn.Linear(d_model, n_kv_heads * d_head, bias=False)\n" +
+          "\n" +
+          "def attend(x):                       # x: (B, T, d_model)\n" +
+          "    B, T, _ = x.shape\n" +
+          "    q = q_proj(x).view(B, T, n_q_heads,  d_head).transpose(1, 2)\n" +
+          "    k = k_proj(x).view(B, T, n_kv_heads, d_head).transpose(1, 2)\n" +
+          "    v = v_proj(x).view(B, T, n_kv_heads, d_head).transpose(1, 2)\n" +
+          "\n" +
+          "    # each group of query heads reuses one shared KV head:\n" +
+          "    reps = n_q_heads // n_kv_heads   # MHA->1, MQA->n_q, GQA->n_q/groups\n" +
+          "    k = k.repeat_interleave(reps, dim=1)   # -> (B, n_q_heads, T, d_head)\n" +
+          "    v = v.repeat_interleave(reps, dim=1)\n" +
+          "    return F.scaled_dot_product_attention(q, k, v, is_causal=True)\n" +
+          "\n" +
+          "# only K,V get cached at decode time (queries are recomputed, never stored):\n" +
+          "# kv_cache_bytes = 2 * n_layers * seq * n_kv_heads * d_head * bytes_per_elem  # 2 = K and V\n",
+          { lang: "python", label: "MHA / MQA / GQA in one head",
+            caption: "n_kv_heads is the whole story: it sizes the K,V projections (and the cache), while " +
+              "repeat_interleave hands each query-head group its shared KV head — exactly the wiring drawn below." }
         )
       ));
 
@@ -6941,7 +8081,7 @@ button { font-family: inherit; }
         onInput: function (v) { state.headDim = Math.round(v); recompute(); }
       });
 
-      // groups slider (only meaningful in GQA) — snaps to power-of-two divisors of nq
+      // groups slider (only meaningful in GQA) — snaps to true divisors of nq
       var sGroups = TQ.slider({
         min: 1, max: state.nq, step: 1, value: state.g, label: "KV groups (g)",
         format: function (v) { return String(snapToStops(Math.round(v), divisorStops(state.nq))); },
@@ -7046,6 +8186,34 @@ button { font-family: inherit; }
           "the KV cache, not the parameters, is what bounds context length and batch size in production."
         )
       ));
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — MHA / MQA / GQA", [
+        {
+          label: "Fast Transformer Decoding: One Write-Head is All You Need (MQA)",
+          url: "https://arxiv.org/abs/1911.02150",
+          kind: "paper",
+          note: "The original MQA paper — share a single K/V head across all query heads to slash decode-time memory."
+        },
+        {
+          label: "GQA: Training Generalized Multi-Query Transformer Models",
+          url: "https://arxiv.org/abs/2305.13245",
+          kind: "paper",
+          note: "Introduces grouped-query attention as the interpolation between MHA and MQA you just dialed through."
+        },
+        {
+          label: "Llama 2 — open foundation models that use GQA",
+          url: "https://arxiv.org/abs/2307.09288",
+          kind: "paper",
+          note: "A flagship open model that adopts GQA (8 KV heads) in practice — the 'sweet spot' in production."
+        },
+        {
+          label: "kipply — Transformer Inference Arithmetic",
+          url: "https://kipply.github.io/transformer-inference-arithmetic/",
+          kind: "blog",
+          note: "Where the 2 × layers × seq × n_kv × head_dim × bytes formula comes from, with the full memory math."
+        }
+      ]));
 
       /* small scoped styles — colors come from CSS variables only, no hex */
       injectOnce("tq-lvl08-css",
@@ -7191,14 +8359,16 @@ button { font-family: inherit; }
           TQ.el("strong", { text: "MLA asks a sharper question:" }),
           " why cache per-head K/V at all? Cache one small shared latent vector ",
           TQ.math("c"), " and reconstruct every head's K and V from it on the fly. ",
-          "You already know this move from your CV days — it's a ",
+          "The trick is a ",
           TQ.el("strong", { text: "low-rank factorization" }),
-          ". The full per-head K/V projection is a fat matrix; MLA factors it as ",
+          " — replace one big matrix with a skinny down-step then a skinny up-step, so you ",
+          "store far fewer numbers. (If you've seen SVD in your CV days, this is the same move.) ",
+          "The full per-head K/V projection is a fat matrix; MLA factors it as ",
           "“squeeze down to ", TQ.math("d_c"), ", then expand back up.” ",
           "You store only the squeezed thing."
         ),
         TQ.callout([
-          "Bridge from SVD: replacing a fat projection with down-then-up (rank ",
+          "Bonus aside if you know SVD: replacing a fat projection with down-then-up (rank ",
           TQ.math("d_c"), ") is exactly rank-k truncation. The latent ", TQ.math("c"),
           " is the compressed code; the up-projections are the basis that re-expands it."
         ])
@@ -7207,12 +8377,12 @@ button { font-family: inherit; }
       /* ============================================================== *
        *  NARRATIVE BLOCK 2 — down/up projection
        * ============================================================== */
-      root.appendChild(TQ.block(
+      var downUpBlock = TQ.block(
         TQ.h(2, "Down-project to cache, up-project to use"),
         TQ.p(
           "Each token's embedding ", TQ.math("h"), " is multiplied by a down-projection ",
           TQ.math("W_DKV"), " to produce a latent ", TQ.math("c"), " of dimension ",
-          TQ.math("d_c"), " — small (think 512 when the full K/V across all heads would be ~16k). ",
+          TQ.math("d_c"), " (", TQ.math("d_c"), " = the latent size) — small (think 512 when the full K/V across all heads would be ~16k). ",
           TQ.math("c"), " is the ", TQ.el("strong", { text: "only" }),
           " thing written to the cache (plus the rope key below)."
         ),
@@ -7226,7 +8396,44 @@ button { font-family: inherit; }
           "why MLA can match MHA quality (the up-projection lets each head recover a rich, ",
           "distinct K/V) while caching less than even GQA."
         )
+      );
+
+      // Conceptual-but-correct PyTorch sketch of the MLA forward path. Same
+      // down -> cache -> up arc the stepper below animates; toy names match the
+      // prose (W_DKV, W_UK, W_UV, c, k_rope). Explicit up-projection shown for
+      // clarity, with a one-line note on the W_Q' absorption trick (Block 3).
+      downUpBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "\n" +
+        "# Toy dims. d_c = latent size; d_rope = size of the little position key.\n" +
+        "d_model, n_heads, head_dim, d_c, d_rope = 4096, 32, 128, 512, 64\n" +
+        "\n" +
+        "# Projections (fixed model weights — they live in the model, NOT the cache).\n" +
+        "W_DKV = nn.Linear(d_model, d_c, bias=False)            # down-project h -> latent\n" +
+        "W_UK  = nn.Linear(d_c, n_heads * head_dim, bias=False) # up-project latent -> per-head K\n" +
+        "W_UV  = nn.Linear(d_c, n_heads * head_dim, bias=False) # up-project latent -> per-head V\n" +
+        "W_KR  = nn.Linear(d_model, d_rope, bias=False)         # decoupled RoPE key\n" +
+        "\n" +
+        "def cache_token(h):\n" +
+        "    # h: (d_model,) hidden for one token.\n" +
+        "    c_KV   = W_DKV(h)               # (d_c,)    <- the ONLY content cached\n" +
+        "    k_rope = apply_rope(W_KR(h))    # (d_rope,) <- tiny position key, cached as-is\n" +
+        "    return c_KV, k_rope             # cache holds just d_c + d_rope numbers\n" +
+        "\n" +
+        "def use_token(c_KV, k_rope):\n" +
+        "    # At attention time, rebuild rich per-head K, V from the cached latent.\n" +
+        "    K = W_UK(c_KV).view(n_heads, head_dim)   # content key per head = c . W_UK_i\n" +
+        "    V = W_UV(c_KV).view(n_heads, head_dim)   # value     per head = c . W_UV_i\n" +
+        "    # Final key per head = concat(content part, the shared decoupled rope key).\n" +
+        "    # score_i = content(K_i) + rope(k_rope); both halves add up.\n" +
+        "    # Absorption trick (Block 3): fold W_Q' = W_Q @ W_UK^T so the query dots\n" +
+        "    # c_KV directly -> K_i need not be materialized at decode. Shown explicit here.\n" +
+        "    return K, V\n",
+        { lang: "python", label: "MLA: down-project, cache, up-project",
+          caption: "This is the same down -> cache -> up path the stepper animates; c_KV is what the cache calculator's MLA bar measures." }
       ));
+      root.appendChild(downUpBlock);
 
       /* ============================================================== *
        *  NARRATIVE BLOCK 3 — decoupled RoPE
@@ -7234,13 +8441,21 @@ button { font-family: inherit; }
       root.appendChild(TQ.block(
         TQ.h(2, "Why RoPE has to ride alongside (the decoupled key)"),
         TQ.p(
+          TQ.el("strong", { text: "Takeaway first: " }),
+          "RoPE's rotation depends on each token's position, so it can't be folded into the fixed ",
+          "weights the way the rest of MLA can — that's why position gets its own little cached key ",
+          "(here \"decoupled\" just means ", TQ.el("em", { text: "kept separate from the compressed latent" }),
+          "). The rest of this block is the deeper ", TQ.el("em", { text: "why" }), "."
+        ),
+        TQ.p(
           "Here's the subtle bug MLA designs around. ", TQ.el("strong", { text: "RoPE" }),
           " (the rotary position trick from L5) rotates each key by an angle that depends on ",
           "the token's absolute position ", TQ.el("em", { text: "before" }),
           " the dot product — so ", TQ.math("q·k"), " ends up depending only on relative distance. ",
           "If you bake RoPE into the cached latent, the rotation is frozen at cache-time and you can ",
           "no longer absorb the up-projection ", TQ.math("W_UK"),
-          " into the query side; the position math and the low-rank math fight."
+          " into the query side; the position math and the low-rank math fight — concretely, the ",
+          "per-position rotation can't be pre-folded into one fixed query weight, so position needs its own key."
         ),
         TQ.p(
           "Make that 'absorb' concrete. The content score is ", TQ.math("q · K_iᵀ = (x·W_Q) · (c·W_UK)ᵀ"),
@@ -7260,6 +8475,7 @@ button { font-family: inherit; }
           " part comes from the latent ", TQ.math("c"),
           " (no position, fully compressible). A small ", TQ.el("strong", { text: "separate" }),
           " rope key ", TQ.math("k_rope"), " of dimension ", TQ.math("d_rope"),
+          " (", TQ.math("d_rope"), " = the size of the little position key) ",
           " carries the rotary position info and is cached as-is beside ", TQ.math("c"),
           ". The query gets a matching rope part. Final score = (content from latent) + (rope part). ",
           "You cache ", TQ.math("d_c + d_rope"),
@@ -7281,6 +8497,53 @@ button { font-family: inherit; }
           " back out to full per-head K/V at use time — no head merged away."
         )
       );
+      // One-glance map of the whole down -> [cache] -> up arc (and where RoPE
+      // branches off) BEFORE the step-by-step stepper reveals it one click at a
+      // time. CACHE bracket = the narrow waist (var(--accent)); k_rope dashed in
+      // var(--info) to match the ropecol's dashed info-colored treatment.
+      animBlock.appendChild(TQ.figure(
+        '<svg viewBox="0 0 560 190" width="560" height="190" role="img" ' +
+          'aria-label="MLA pipeline: hidden h down-projects to a small cached latent c plus a tiny rope key, then up-projects to per-head K and V" ' +
+          'font-family="var(--mono)" font-size="12">' +
+          '<defs><marker id="tq-l9-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // stage 1: hidden h (tall box)
+          '<text x="46" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">hidden h</text>' +
+          '<rect x="22" y="30" width="48" height="130" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="46" y="100" text-anchor="middle" fill="var(--ink-soft)">d_model</text>' +
+          // arrow down-project
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="74" y1="80" x2="146" y2="80" marker-end="url(#tq-l9-arrow)"/></g>' +
+          '<text x="110" y="72" text-anchor="middle" fill="var(--ink-faint)" font-size="10">W_DKV</text>' +
+          // CACHE bracket containing latent c (short) + k_rope (tiny dashed)
+          '<rect x="150" y="20" width="118" height="150" rx="9" fill="none" ' +
+            'stroke="var(--accent)" stroke-width="1.5"/>' +
+          '<text x="209" y="14" text-anchor="middle" fill="var(--accent)" font-size="11">CACHE (narrow waist)</text>' +
+          '<rect x="166" y="48" width="44" height="62" rx="6" fill="var(--panel-hi)" ' +
+            'stroke="var(--accent)" stroke-width="1.5"/>' +
+          '<text x="188" y="83" text-anchor="middle" fill="var(--ink)">c · d_c</text>' +
+          '<rect x="166" y="124" width="86" height="30" rx="6" fill="none" ' +
+            'stroke="var(--info)" stroke-width="1.5" stroke-dasharray="4 3"/>' +
+          '<text x="209" y="143" text-anchor="middle" fill="var(--info)" font-size="11">k_rope · d_rope</text>' +
+          // arrow up-project (fan out)
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="270" y1="80" x2="342" y2="80" marker-end="url(#tq-l9-arrow)"/></g>' +
+          '<text x="306" y="72" text-anchor="middle" fill="var(--ink-faint)" font-size="10">W_UK / W_UV</text>' +
+          // stage 3: per-head K,V fan-out (several short boxes)
+          '<text x="450" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">per-head K, V</text>' +
+          '<g fill="var(--panel-hi)" stroke="var(--line)">' +
+            '<rect x="352" y="34" width="180" height="20" rx="5"/>' +
+            '<rect x="352" y="60" width="180" height="20" rx="5"/>' +
+            '<rect x="352" y="86" width="180" height="20" rx="5"/>' +
+            '<rect x="352" y="112" width="180" height="20" rx="5"/>' +
+            '<rect x="352" y="138" width="180" height="20" rx="5"/>' +
+          '</g>' +
+          '<text x="442" y="100" text-anchor="middle" fill="var(--ink-soft)" font-size="10">n_heads × head_dim (rebuilt on the fly)</text>' +
+        '</svg>',
+        "The narrow waist: only the small latent c (+ a tiny rope key) is cached; per-head K/V are rebuilt from it on the fly."
+      ));
+
       var legend = TQ.el("div", { class: "tq-legend" },
         TQ.el("span", { text: "low" }),
         TQ.el("div", { class: "tq-legend-scale" }),
@@ -7582,6 +8845,42 @@ button { font-family: inherit; }
       root.appendChild(calcBlock);
 
       /* ============================================================== *
+       *  GO DEEPER (resources)
+       * ============================================================== */
+      root.appendChild(TQ.resources("Go deeper — MLA & the KV-cache family", [
+        {
+          label: "DeepSeek-V2 — introduces Multi-head Latent Attention",
+          url: "https://arxiv.org/abs/2405.04434",
+          kind: "paper",
+          note: "The paper that proposes MLA: the down/up-projection and the decoupled RoPE key you just stepped through."
+        },
+        {
+          label: "DeepSeek-V3",
+          url: "https://arxiv.org/abs/2412.19437",
+          kind: "paper",
+          note: "MLA at scale in a frontier model — the production payoff of this design."
+        },
+        {
+          label: "GQA — Grouped-Query Attention",
+          url: "https://arxiv.org/abs/2305.13245",
+          kind: "paper",
+          note: "The baseline MLA beats: heads share K/V to shrink the cache (a real quality hit)."
+        },
+        {
+          label: "Fast Transformer Decoding — Multi-Query Attention",
+          url: "https://arxiv.org/abs/1911.02150",
+          kind: "paper",
+          note: "MQA, the extreme of head-sharing — lowest cache but biggest expressivity cost."
+        },
+        {
+          label: "RoFormer / RoPE",
+          url: "https://arxiv.org/abs/2104.09864",
+          kind: "paper",
+          note: "The rotary positional trick whose position-dependent rotation forces MLA's decoupled rope key."
+        }
+      ]));
+
+      /* ============================================================== *
        *  WRAP-UP
        * ============================================================== */
       root.appendChild(TQ.block(
@@ -7746,7 +9045,8 @@ button { font-family: inherit; }
           TQ.el("strong", { text: "vector" }), " (embedding). ",
           "Position gets stamped in (sinusoidal / RoPE) so order isn't lost. Each token projects to a ",
           TQ.el("strong", { text: "query, key, value" }), ". Attention scores every query against every key with a ",
-          "dot product, divides by ", TQ.math("√dk"), " so the softmax doesn't saturate, normalizes to weights, ",
+          "dot product, divides by ", TQ.math("√dk"), " so the softmax doesn't saturate (collapse all its " +
+          "weight onto one token), normalizes to weights, ",
           "and mixes the values — that's one head. Many heads run in parallel, each reading a different ",
           "relationship; their outputs concat and pass through ", TQ.math("Wo"), ". Wrap that in ",
           TQ.el("strong", { text: "residual + LayerNorm" }), ", add an FFN, stack the block N times, and predict ",
@@ -7768,7 +9068,56 @@ button { font-family: inherit; }
             );
           })
         ),
-        TQ.note("We trace token #1, \"cat\", through every stage so you watch one concrete vector move.")
+        TQ.note("We trace token #1, \"cat\", through every stage so you watch one concrete vector move."),
+        // Whole-map diagram: the full decoder-only skeleton at a glance — the
+        // stacked xN loop, final norm and lm_head that the click-through strip
+        // (which reveals stages one at a time and stops at KV cache) never shows
+        // in one view. Static SVG; theme colors only via CSS vars / currentColor.
+        TQ.figure(
+          '<svg viewBox="0 0 720 130" width="720" height="130" role="img" ' +
+            'aria-label="Whole decoder-only skeleton: tokens to embed plus position to N transformer blocks to final LayerNorm to lm_head to next-token probabilities" ' +
+            'font-family="var(--mono)" font-size="11">' +
+            '<defs><marker id="tq-l10-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+              'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+            // stage boxes
+            '<rect x="8" y="48" width="78" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="47" y="69" text-anchor="middle" fill="var(--ink)">tokens</text>' +
+            '<rect x="120" y="48" width="104" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="172" y="64" text-anchor="middle" fill="var(--ink)">embed</text>' +
+            '<text x="172" y="77" text-anchor="middle" fill="var(--ink-mute)" font-size="9">+ position</text>' +
+            // stacked block (xN) — drawn as offset rects to suggest depth
+            '<rect x="276" y="38" width="150" height="54" rx="9" fill="none" stroke="var(--line-soft)"/>' +
+            '<rect x="270" y="32" width="150" height="54" rx="9" fill="none" stroke="var(--line-soft)"/>' +
+            '<rect x="264" y="44" width="150" height="54" rx="9" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+            '<text x="339" y="64" text-anchor="middle" fill="var(--ink)">transformer block</text>' +
+            '<text x="339" y="78" text-anchor="middle" fill="var(--ink-mute)" font-size="9">attn + FFN, each residual+LN</text>' +
+            '<text x="339" y="26" text-anchor="middle" fill="var(--accent)" font-size="11">× N</text>' +
+            '<rect x="450" y="48" width="92" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="496" y="69" text-anchor="middle" fill="var(--ink)">final LN</text>' +
+            '<rect x="568" y="48" width="78" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="607" y="69" text-anchor="middle" fill="var(--ink)">lm_head</text>' +
+            // final probabilities glyph
+            '<g>' +
+              '<rect x="676" y="46" width="10" height="14" rx="2" fill="var(--accent)"/>' +
+              '<rect x="676" y="62" width="10" height="9" rx="2" fill="var(--cool)"/>' +
+              '<rect x="676" y="73" width="10" height="6" rx="2" fill="var(--info)"/>' +
+              '<text x="681" y="93" text-anchor="middle" fill="var(--ink-mute)" font-size="9">P(next)</text>' +
+            '</g>' +
+            // arrows
+            '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+              '<line x1="90" y1="65" x2="116" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+              '<line x1="228" y1="65" x2="260" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+              '<line x1="418" y1="65" x2="446" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+              '<line x1="546" y1="65" x2="564" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+              '<line x1="650" y1="65" x2="672" y2="65" marker-end="url(#tq-l10-arrow)"/>' +
+            '</g>' +
+          '</svg>',
+          "The whole decoder-only skeleton in one view: tokens → embed (+ positional encoding) → a " +
+          "transformer block (attention + FFN, each wrapped in residual + LayerNorm) stacked × N → a " +
+          "final LayerNorm → lm_head, producing next-token probabilities. The clickable strip below walks " +
+          "the stages one at a time; this map shows the stacked shape they live inside."
+        )
       ));
 
       /* ============================================================ *
@@ -7887,9 +9236,10 @@ button { font-family: inherit; }
               statChip("Σ weights", TQ.fmt(TQ.sum(weightsCat), 2))
             ));
             c.appendChild(TQ.callout(
-              "Why √dk exists: dot products of dk components have std ∝ √dk. Without the divide, big dk " +
-              "makes logits huge and softmax spikes to near one-hot — gradients vanish. Compare the two " +
-              "distributions below: UNscaled (left) is peakier than scaled (right)."
+              "Why √dk exists: dot products of dk components have std ∝ √dk, so bigger dk means bigger raw " +
+              "scores (logits). Without the divide, those scores get huge and the softmax spikes to near " +
+              "one-hot (all the weight on a single token, the rest ~0) — so gradients vanish and learning " +
+              "stalls. Compare the two distributions below: UNscaled (left) is peakier than scaled (right)."
             ));
             var cmp = TQ.el("div", { class: "tq-boss-cmp" },
               TQ.el("div", {},
@@ -7929,8 +9279,11 @@ button { font-family: inherit; }
           run: function (c) {
             c.appendChild(TQ.p(
               TQ.el("strong", { text: "What & why: " }),
-              "the sublayer output is added back to the input (residual), then normalized. Order is ",
-              TQ.el("strong", { text: "residual-THEN-LayerNorm" }), " (post-LN, as in the Illustrated Transformer). ",
+              "the sublayer output is added back to the input (the ", TQ.el("strong", { text: "residual" }),
+              ", ", TQ.math("x + sublayer"), " — keeping the original ", TQ.math("x"),
+              " gives gradients a clean shortcut so deep stacks still train), then normalized. Order is ",
+              TQ.el("strong", { text: "residual-THEN-LayerNorm" }),
+              " (\"post-LN\" means the norm comes after the residual add, as in the Illustrated Transformer). ",
               "We use the multi-head output for \"cat\" (already ", TQ.math("d_model=16"),
               ") so the residual add is dimension-clean."
             ));
@@ -8016,6 +9369,41 @@ button { font-family: inherit; }
       pipeBlock.appendChild(strip);
       pipeBlock.appendChild(detail);
       selectStage(0);
+
+      // The same stages as runnable-style PyTorch pseudocode, one-to-one with the
+      // strip above. Each comment names the level it came from so the skeleton
+      // literally ties the whole course together. Kept a skeleton (not training
+      // code) — the def blocks are what every stage you clicked adds up to.
+      pipeBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "import torch.nn.functional as F\n" +
+        "\n" +
+        "def block_forward(x, attn, ffn, ln1, ln2, kv_cache=None):\n" +
+        "    # one transformer block = residual + LayerNorm around (a) attention, (b) FFN\n" +
+        "    # attn does softmax(Q @ K.T / sqrt(dk)) @ V  (L3 scaling, L4 multi-head).\n" +
+        "    # MHA/MQA/GQA/MLA only change HOW K and V are stored/shared (L8/L9);\n" +
+        "    # kv_cache holds every past token's K and V so we don't recompute them (L7).\n" +
+        "    x = x + attn(ln1(x), kv_cache=kv_cache)   # causal self-attention sublayer\n" +
+        "    x = x + ffn(ln2(x))                       # position-wise feed-forward sublayer\n" +
+        "    return x\n" +
+        "\n" +
+        "def model_forward(token_ids, embed, pos_enc, blocks, ln_f, lm_head, kv=None):\n" +
+        "    x = embed(token_ids)                      # token -> vector lookup (L1)\n" +
+        "    x = pos_enc(x)                            # stamp in order: sinusoidal / RoPE (L5)\n" +
+        "    for i, block in enumerate(blocks):        # stack N transformer blocks\n" +
+        "        x = block_forward(x, *block, kv_cache=(kv[i] if kv else None))\n" +
+        "    x = ln_f(x)                              # final LayerNorm (L6)\n" +
+        "    logits = lm_head(x)                      # project to vocab: (seq, vocab)\n" +
+        "    return logits                            # softmax(logits[-1]) = next-token probs\n",
+        { lang: "python", label: "decoder-only forward",
+          caption: "The whole course as one forward pass: embed + position -> N blocks (attention + FFN, " +
+            "each residual + LayerNorm) -> final LayerNorm -> lm_head. Each comment names the level it came from. " +
+            "Note this skeleton norms BEFORE each sublayer (x + sublayer(ln(x))) — that's \"pre-LN\", the modern " +
+            "GPT/nanoGPT default, which is why a final ln_f is needed; the Block stage above shows the classic " +
+            "\"post-LN\" (norm after the residual add) from the original paper. Both are valid; production decoders use pre-LN." }
+      ));
+
       root.appendChild(pipeBlock);
 
       /* ========================================================== *
@@ -8036,9 +9424,10 @@ button { font-family: inherit; }
           TQ.el("strong", { text: "MQA / GQA" }), " attack memory by cutting ", TQ.math("n_kv_heads"),
           " (saving ", TQ.math("1 − n_kv/n_q"), ") while keeping all query heads for quality. ",
           TQ.el("strong", { text: "MLA" }), " goes further: it stops caching K and V directly and instead caches a ",
-          "small latent ", TQ.math("c"), " that both are reconstructed from — paying for it with a separate, ",
-          "decoupled RoPE key, because you can't bake rotary position into a compressed latent and still ",
-          "rebuild clean per-head keys."
+          "small latent ", TQ.math("c"), " — a compressed summary the keys and values are rebuilt from — ",
+          "paying for it with a separate, ",
+          "decoupled RoPE key (a tiny extra key that carries position), because you can't bake rotary position ",
+          "into a compressed latent and still rebuild clean per-head keys."
         )
       ));
 
@@ -8200,6 +9589,34 @@ button { font-family: inherit; }
           "shrinks the PER-TOKEN constant. MLA shrinks it the most while paying the least quality — that's why " +
           "it's the clever one. Now go ship something memory-efficient.")
       ));
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — build the whole thing yourself", [
+        {
+          label: "Andrej Karpathy — nanoGPT",
+          url: "https://github.com/karpathy/nanoGPT",
+          kind: "code",
+          note: "A tiny, readable decoder-only GPT in PyTorch — the real version of the model_forward skeleton above."
+        },
+        {
+          label: "Andrej Karpathy — Let's build GPT from scratch",
+          url: "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+          kind: "video",
+          note: "Builds the entire forward pass live, from embedding to lm_head — every stage in this level, in order."
+        },
+        {
+          label: "The Illustrated Transformer",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          kind: "blog",
+          note: "Jay Alammar's visual walkthrough of the whole stack — the picture this recap puts numbers on."
+        },
+        {
+          label: "Attention Is All You Need",
+          url: "https://arxiv.org/abs/1706.03762",
+          kind: "paper",
+          note: "The original paper that introduced scaled dot-product attention and the transformer block."
+        }
+      ]));
 
       /* scoped styles — colors only via CSS variables / colorFor, no hardcoded hex */
       injectOnce("tq-lvl10-css",

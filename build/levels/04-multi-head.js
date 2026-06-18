@@ -122,11 +122,74 @@
           TQ.el("span", { class: "tq-mh-arith-item" }, TQ.math("concat width = H × dk = " + H + " × " + dk + " = " + (H * dk) + " = d_model"))
         ),
         TQ.p(
+          "(\"Subspace\" just means a smaller slice of the representation space — each head looks at only ",
+          TQ.math("dk"), " of the ", TQ.math("d_model"), " coordinates, reached through its own learned projection, ",
+          "rather than the full width.) ",
           "Here ", TQ.math("d_model = " + dModel), ", ", TQ.math("H = " + H), ", so ", TQ.math("dk = " + dk),
-          " — four ", dk + "-dimensional attentions running side by side. This is almost exactly your CNN intuition: ",
-          "a conv layer doesn't apply one filter, it applies a ", TQ.el("strong", { text: "bank" }),
+          " — four ", dk + "-dimensional attentions running side by side. ",
+          TQ.el("strong", { text: "If you've seen CNNs" }), " (optional analogy — skip if not): ",
+          "this is almost exactly that intuition — a conv layer doesn't apply one filter, it applies a ",
+          TQ.el("strong", { text: "bank" }),
           " of filters, each tuned to a different pattern (edges, texture, color blobs). A head is an attention ",
           "\"filter\"; the bank gives the layer multiple simultaneous ways to relate tokens."
+        ),
+        // Orienting diagram: the whole split → parallel heads → concat → Wo
+        // pipeline at a glance, BEFORE the interactive parts dissect each stage.
+        // Static SVG, theme colors via CSS vars / currentColor (no hardcoded hex).
+        TQ.figure(
+          '<svg viewBox="0 0 720 230" width="720" height="230" role="img" ' +
+            'aria-label="Multi-head attention pipeline: split into heads, attend in parallel, concatenate, project with Wo" ' +
+            'font-family="var(--mono)" font-size="12">' +
+            '<defs><marker id="tq-l4-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+              'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+            '<g stroke="currentColor" stroke-width="1.4" fill="none" color="var(--ink-faint)">' +
+              // X -> split fan-out
+              '<line x1="92" y1="115" x2="150" y2="115" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="156" y1="115" x2="300" y2="35"  marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="156" y1="115" x2="300" y2="88"  marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="156" y1="115" x2="300" y2="141" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="156" y1="115" x2="300" y2="194" marker-end="url(#tq-l4-arrow)"/>' +
+              // heads -> concat converge
+              '<line x1="430" y1="35"  x2="540" y2="108" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="430" y1="88"  x2="540" y2="112" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="430" y1="141" x2="540" y2="118" marker-end="url(#tq-l4-arrow)"/>' +
+              '<line x1="430" y1="194" x2="540" y2="122" marker-end="url(#tq-l4-arrow)"/>' +
+              // concat -> Wo -> out
+              '<line x1="600" y1="115" x2="630" y2="115" marker-end="url(#tq-l4-arrow)"/>' +
+            '</g>' +
+            // X input
+            '<text x="48" y="92" text-anchor="middle" fill="var(--ink-mute)" font-size="11">input</text>' +
+            '<rect x="14" y="100" width="76" height="32" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="52" y="120" text-anchor="middle" fill="var(--ink)">X (6×16)</text>' +
+            // split node label
+            '<text x="150" y="150" text-anchor="middle" fill="var(--ink-faint)" font-size="10">split H=4</text>' +
+            // four head boxes
+            '<g>' +
+              '<rect x="300" y="20"  width="130" height="30" rx="6" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+              '<text x="365" y="39"  text-anchor="middle" fill="var(--ink)">head 1 · dk=4</text>' +
+              '<rect x="300" y="73"  width="130" height="30" rx="6" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+              '<text x="365" y="92"  text-anchor="middle" fill="var(--ink)">head 2 · dk=4</text>' +
+              '<rect x="300" y="126" width="130" height="30" rx="6" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+              '<text x="365" y="145" text-anchor="middle" fill="var(--ink)">head 3 · dk=4</text>' +
+              '<rect x="300" y="179" width="130" height="30" rx="6" fill="var(--panel-hi)" stroke="var(--accent)"/>' +
+              '<text x="365" y="198" text-anchor="middle" fill="var(--ink)">head 4 · dk=4</text>' +
+            '</g>' +
+            '<text x="365" y="13" text-anchor="middle" fill="var(--ink-mute)" font-size="10">attend in parallel → each 6×4</text>' +
+            // concat node
+            '<rect x="540" y="98" width="60" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--accent-2)"/>' +
+            '<text x="570" y="119" text-anchor="middle" fill="var(--ink)">concat</text>' +
+            '<text x="570" y="150" text-anchor="middle" fill="var(--ink-faint)" font-size="10">6×16</text>' +
+            // Wo box
+            '<rect x="630" y="99" width="74" height="32" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="667" y="119" text-anchor="middle" fill="var(--ink)">Wo (16×16)</text>' +
+            '<text x="667" y="150" text-anchor="middle" fill="var(--ink-faint)" font-size="10">out 6×16</text>' +
+            // arrow shape labels
+            '<text x="120" y="108" text-anchor="middle" fill="var(--ink-faint)" font-size="10">6×16</text>' +
+            '<text x="250" y="78"  text-anchor="middle" fill="var(--ink-faint)" font-size="10">6×4 ×4</text>' +
+          '</svg>',
+          "The whole pipeline at a glance: split d_model into H heads, attend in parallel subspaces, " +
+          "concatenate back to d_model, then mix with Wo. The tabs and tracer below let you play with each stage."
         )
       ));
 
@@ -233,6 +296,8 @@
                 ),
                 TQ.note("Each cell = how much the query (row) reads from the key (col). " +
                   "Every row is a softmax, so it sums to ≈1.00 and lives in [0,1]. " +
+                  "(\"Row entropy\" above = how spread-out vs. peaked a row is: low = the head " +
+                  "focuses hard on one key, high = it spreads attention evenly across keys.) " +
                   "Click any row to trace that query through Concat + Wo below.")
               );
 
@@ -352,7 +417,8 @@
           "in WHERE they peak, not how " +
           "sharp they are — row entropies here are " +
           ents.map(function (e) { return TQ.fmt(e, 2); }).join(" / ") +
-          " (uniform ceiling ln 6 = " + TQ.fmt(Math.log(n), 2) + "). The bottom UNION row is the elementwise " +
+          " (uniform ceiling ln 6 = " + TQ.fmt(Math.log(n), 2) + " — the entropy a row would have if attention " +
+          "were spread perfectly evenly across all six keys). The bottom UNION row is the elementwise " +
           "max across the ENABLED heads: drop to one head and it collapses to that head's narrow row; enable all " +
           "four and it lights up across keys no single head reached."
         ));
@@ -482,6 +548,42 @@
         concatPanel
       );
       renderConcat();
+      // Minimal, correct PyTorch forward pass that maps 1:1 onto this toy:
+      // d_model=16, H=4, dk=4. The (B, n, H, dk) reshape is the batched view
+      // that runs all heads in parallel — exactly what the tracer above showed.
+      concatBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "import torch.nn.functional as F\n" +
+        "\n" +
+        "class MultiHeadAttention(nn.Module):\n" +
+        "    def __init__(self, d_model=16, n_heads=4):\n" +
+        "        super().__init__()\n" +
+        "        self.n_heads = n_heads\n" +
+        "        self.d_k = d_model // n_heads        # 16 // 4 = 4 (this level's dk)\n" +
+        "        self.w_q = nn.Linear(d_model, d_model)   # one (16->16) projection each\n" +
+        "        self.w_k = nn.Linear(d_model, d_model)\n" +
+        "        self.w_v = nn.Linear(d_model, d_model)\n" +
+        "        self.w_o = nn.Linear(d_model, d_model)   # the learned output mixer\n" +
+        "\n" +
+        "    def forward(self, x):                    # x: (B, n, d_model)\n" +
+        "        B, n, _ = x.shape\n" +
+        "        # project, then split d_model into (n_heads, d_k) and move heads up front\n" +
+        "        # (B, n, d_model) -> (B, n, H, d_k) -> (B, H, n, d_k): the batched view\n" +
+        "        q = self.w_q(x).view(B, n, self.n_heads, self.d_k).transpose(1, 2)\n" +
+        "        k = self.w_k(x).view(B, n, self.n_heads, self.d_k).transpose(1, 2)\n" +
+        "        v = self.w_v(x).view(B, n, self.n_heads, self.d_k).transpose(1, 2)\n" +
+        "        # scaled dot-product attention, applied across ALL heads at once\n" +
+        "        scores = q @ k.transpose(-2, -1) / (self.d_k ** 0.5)   # (B, H, n, n)\n" +
+        "        attn = F.softmax(scores, dim=-1)     # one softmax runs all H heads\n" +
+        "        out = attn @ v                       # (B, H, n, d_k)\n" +
+        "        # transpose + reshape back: this IS the concat, width H*d_k = 16 = d_model\n" +
+        "        out = out.transpose(1, 2).reshape(B, n, self.n_heads * self.d_k)\n" +
+        "        return self.w_o(out)                 # (B, n, d_model)\n",
+        { lang: "python", label: "multi-head attention",
+          caption: "The (B, n, H, dk) reshape is the whole trick: one batched softmax runs all H heads in " +
+                   "parallel; transpose+reshape is the concat; w_o is the mixer." }
+      ));
       root.appendChild(concatBlock);
 
       /* --------------------------------------------------- wrap-up takeaway */
@@ -499,6 +601,25 @@
           "transformer block — the next level."
         )
       ));
+
+      /* ----------------------------------------------------- go deeper links */
+      root.appendChild(TQ.resources("Go deeper", [
+        { label: "The Illustrated Transformer", kind: "blog",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          note: "the visual walkthrough this level's preread points at — multi-head section" },
+        { label: "3Blue1Brown — Attention, visually explained", kind: "video",
+          url: "https://www.youtube.com/watch?v=eMlx5fFNoYc",
+          note: "geometric intuition for what each head's Q/K/V does" },
+        { label: "Andrej Karpathy — Let's build GPT from scratch", kind: "video",
+          url: "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+          note: "codes the exact (B, n, H, dk) reshape above, from scratch" },
+        { label: "The Annotated Transformer", kind: "code",
+          url: "https://nlp.seas.harvard.edu/annotated-transformer/",
+          note: "line-by-line PyTorch alongside the original paper" },
+        { label: "Attention Is All You Need (§3.2.2, Multi-Head Attention)", kind: "paper",
+          url: "https://arxiv.org/abs/1706.03762",
+          note: "the source — the Concat·Wo formula in its original form" }
+      ]));
 
       /* small scoped styles (colors via CSS vars only — no hardcoded hex) */
       injectOnce("tq-lvl04-css",

@@ -49,7 +49,8 @@
           "At inference a transformer generates ", TQ.el("strong", { text: "one token at a time" }),
           ". For every new token, attention needs the Keys and Values of ",
           TQ.el("em", { text: "every previous token" }),
-          " — recomputing them each step would be quadratic suicide. So we cache them: the ",
+          " — and recomputing all of those past Keys and Values from scratch for every new token would cost ",
+          "on the order of seq_len² work (you'd redo the whole history each step). So we cache them instead: the ",
           TQ.el("strong", { text: "KV cache" }),
           ". It grows linearly with context length, and is stored per layer, for both K and V."
         ),
@@ -60,14 +61,69 @@
           "The load-bearing subtlety: cache size depends on the number of KEY/VALUE heads, " +
           "NOT the number of QUERY heads. Queries are computed fresh each step and thrown away — " +
           "they're never cached. Keys and Values are what you pay rent on. That asymmetry is the whole trick."
+        ),
+        // Static orienting figure: WHERE the KV cache lives and WHY it grows,
+        // before the interactive wiring canvas (which assumes you know this).
+        // Theme colors only via CSS vars / currentColor — no hardcoded hex.
+        TQ.figure(
+          '<svg viewBox="0 0 560 130" width="560" height="130" role="img" ' +
+            'aria-label="Decode loop: past tokens store K,V into the per-layer KV cache; a new token attends back to all of them and appends its own K,V" ' +
+            'font-family="var(--mono)" font-size="12">' +
+            '<defs><marker id="tq-l8-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+              'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+            // the KV cache box (per layer)
+            '<text x="200" y="20" text-anchor="middle" fill="var(--ink-mute)" font-size="11">KV cache (per layer)</text>' +
+            '<rect x="24" y="30" width="352" height="44" rx="9" fill="var(--panel-hi)" ' +
+              'stroke="var(--line)"/>' +
+            // four stored [K,V] slots for past tokens t1..t4
+            '<g>' +
+              '<rect x="38" y="40" width="70" height="24" rx="5" fill="none" stroke="var(--cool-deep)"/>' +
+              '<text x="73" y="56" text-anchor="middle" fill="var(--ink-soft)">t1 [K,V]</text>' +
+              '<rect x="118" y="40" width="70" height="24" rx="5" fill="none" stroke="var(--cool-deep)"/>' +
+              '<text x="153" y="56" text-anchor="middle" fill="var(--ink-soft)">t2 [K,V]</text>' +
+              '<rect x="198" y="40" width="70" height="24" rx="5" fill="none" stroke="var(--cool-deep)"/>' +
+              '<text x="233" y="56" text-anchor="middle" fill="var(--ink-soft)">t3 [K,V]</text>' +
+              '<rect x="278" y="40" width="70" height="24" rx="5" fill="none" stroke="var(--cool-deep)"/>' +
+              '<text x="313" y="56" text-anchor="middle" fill="var(--ink-soft)">t4 [K,V]</text>' +
+            '</g>' +
+            // the appended slot for the new token t5
+            '<rect x="392" y="40" width="70" height="24" rx="5" fill="none" ' +
+              'stroke="var(--accent-2)" stroke-dasharray="4 3"/>' +
+            '<text x="427" y="56" text-anchor="middle" fill="var(--accent-2)">t5 [K,V]</text>' +
+            '<text x="427" y="80" text-anchor="middle" fill="var(--ink-faint)" font-size="10">appended</text>' +
+            // new token t5 at generation time
+            '<rect x="468" y="92" width="74" height="26" rx="6" fill="var(--panel-hi)" ' +
+              'stroke="var(--accent-2)"/>' +
+            '<text x="505" y="109" text-anchor="middle" fill="var(--accent-2)">new tok t5</text>' +
+            // attention arrows: t5 reads back from every cached K,V
+            '<g stroke="currentColor" stroke-width="1.4" fill="none" color="var(--ink-faint)">' +
+              '<path d="M470 100 C 300 110, 110 96, 73 66" marker-end="url(#tq-l8-arrow)"/>' +
+              '<path d="M474 100 C 320 112, 180 96, 153 66" marker-end="url(#tq-l8-arrow)"/>' +
+              '<path d="M478 100 C 360 112, 250 96, 233 66" marker-end="url(#tq-l8-arrow)"/>' +
+              '<path d="M482 100 C 400 110, 320 96, 313 66" marker-end="url(#tq-l8-arrow)"/>' +
+            '</g>' +
+            '<text x="250" y="124" text-anchor="middle" fill="var(--ink-faint)" font-size="10">' +
+              't5 attends back to every cached K,V</text>' +
+          '</svg>',
+          "Decode time: each past token left one [K,V] slot in the per-layer cache. The new token " +
+          "attends back to all of them, then appends its own [K,V]. The cache grows by one slot per token " +
+          "per layer — and n_kv (not n_q) sets each slot's width."
         )
       ));
 
       root.appendChild(TQ.block(
         TQ.h(2, "Three ways to wire query heads to KV heads"),
         TQ.p(
-          "Think back to grouped / depthwise convolution (splitting channels into independent groups) — ",
-          "same structural move, different axis. Here we're grouping the ", TQ.el("strong", { text: "attention heads" }), "."
+          "Quick vocabulary: a transformer splits attention into ", TQ.el("strong", { text: "n_q query heads" }),
+          ", each working in a slice of the model called ", TQ.el("strong", { text: "head_dim" }),
+          " (typically head_dim = d_model / n_heads). ",
+          TQ.el("strong", { text: "n_kv" }), " is how many distinct Key/Value heads we keep — the lever this level is about. ",
+          "The three variants below just change how query heads are wired to those KV heads."
+        ),
+        TQ.note(
+          "Optional analogy for the CNN-fluent: this is the same structural move as grouped / depthwise " +
+          "convolution (splitting channels into independent groups), just applied to attention heads instead of channels."
         ),
         TQ.el("ul", { class: "tq-mode-list" },
           TQ.el("li", {},
@@ -76,13 +132,58 @@
           TQ.el("li", {},
             TQ.el("strong", { text: "MQA (Multi-Query): " }),
             "n_kv = 1. ALL query heads share one K/V. Cache shrinks by a factor of n_q (e.g. 64×). " +
-            "Cheapest — but funnelling every head through one key space can measurably hurt quality " +
-            "(PaLM noted small-but-real degradation and training instability)."),
+            "Cheapest — but forcing every query head to read from one shared K/V can measurably hurt quality " +
+            "(Google's PaLM model noted small-but-real degradation and training instability)."),
           TQ.el("li", {},
             TQ.el("strong", { text: "GQA (Grouped-Query): " }),
             "n_kv = g, with 1 < g < n_q. Query heads are partitioned into g groups; each shares one K/V. " +
             "It interpolates exactly between MHA (g = n_q) and MQA (g = 1). Llama-2 70B and Llama-3 use " +
             "GQA with 8 KV heads — the sweet spot. Savings vs MHA = ", TQ.math("1 − n_kv/n_q"), ".")
+        )
+      ));
+
+      /* ---- the same idea, grounded in real PyTorch (code precedes play) --- */
+      root.appendChild(TQ.block(
+        TQ.h(2, "The same idea in PyTorch"),
+        TQ.p(
+          "All three variants are ", TQ.el("strong", { text: "one" }), " head-projection with a single knob, ",
+          TQ.math("n_kv_heads"), ". Notice K and V are projected to ", TQ.el("strong", { text: "fewer" }),
+          " heads than Q — that smaller projection is exactly what shrinks the cache."
+        ),
+        TQ.code(
+          "import torch\n" +
+          "import torch.nn as nn\n" +
+          "import torch.nn.functional as F\n" +
+          "\n" +
+          "d_model, n_q_heads, d_head = 4096, 32, 128\n" +
+          "\n" +
+          "# the one knob that picks the variant:\n" +
+          "#   MHA -> n_q_heads (32) | MQA -> 1 | GQA -> groups (e.g. 8)\n" +
+          "# for GQA: 1 < n_kv_heads < n_q_heads, and it must divide n_q_heads evenly\n" +
+          "n_kv_heads = 8\n" +
+          "\n" +
+          "# Q is projected to all query heads; K and V to only n_kv_heads (smaller!)\n" +
+          "q_proj = nn.Linear(d_model, n_q_heads  * d_head, bias=False)\n" +
+          "k_proj = nn.Linear(d_model, n_kv_heads * d_head, bias=False)\n" +
+          "v_proj = nn.Linear(d_model, n_kv_heads * d_head, bias=False)\n" +
+          "\n" +
+          "def attend(x):                       # x: (B, T, d_model)\n" +
+          "    B, T, _ = x.shape\n" +
+          "    q = q_proj(x).view(B, T, n_q_heads,  d_head).transpose(1, 2)\n" +
+          "    k = k_proj(x).view(B, T, n_kv_heads, d_head).transpose(1, 2)\n" +
+          "    v = v_proj(x).view(B, T, n_kv_heads, d_head).transpose(1, 2)\n" +
+          "\n" +
+          "    # each group of query heads reuses one shared KV head:\n" +
+          "    reps = n_q_heads // n_kv_heads   # MHA->1, MQA->n_q, GQA->n_q/groups\n" +
+          "    k = k.repeat_interleave(reps, dim=1)   # -> (B, n_q_heads, T, d_head)\n" +
+          "    v = v.repeat_interleave(reps, dim=1)\n" +
+          "    return F.scaled_dot_product_attention(q, k, v, is_causal=True)\n" +
+          "\n" +
+          "# only K,V get cached at decode time (queries are recomputed, never stored):\n" +
+          "# kv_cache_bytes = 2 * n_layers * seq * n_kv_heads * d_head * bytes_per_elem  # 2 = K and V\n",
+          { lang: "python", label: "MHA / MQA / GQA in one head",
+            caption: "n_kv_heads is the whole story: it sizes the K,V projections (and the cache), while " +
+              "repeat_interleave hands each query-head group its shared KV head — exactly the wiring drawn below." }
         )
       ));
 
@@ -303,7 +404,7 @@
         onInput: function (v) { state.headDim = Math.round(v); recompute(); }
       });
 
-      // groups slider (only meaningful in GQA) — snaps to power-of-two divisors of nq
+      // groups slider (only meaningful in GQA) — snaps to true divisors of nq
       var sGroups = TQ.slider({
         min: 1, max: state.nq, step: 1, value: state.g, label: "KV groups (g)",
         format: function (v) { return String(snapToStops(Math.round(v), divisorStops(state.nq))); },
@@ -408,6 +509,34 @@
           "the KV cache, not the parameters, is what bounds context length and batch size in production."
         )
       ));
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — MHA / MQA / GQA", [
+        {
+          label: "Fast Transformer Decoding: One Write-Head is All You Need (MQA)",
+          url: "https://arxiv.org/abs/1911.02150",
+          kind: "paper",
+          note: "The original MQA paper — share a single K/V head across all query heads to slash decode-time memory."
+        },
+        {
+          label: "GQA: Training Generalized Multi-Query Transformer Models",
+          url: "https://arxiv.org/abs/2305.13245",
+          kind: "paper",
+          note: "Introduces grouped-query attention as the interpolation between MHA and MQA you just dialed through."
+        },
+        {
+          label: "Llama 2 — open foundation models that use GQA",
+          url: "https://arxiv.org/abs/2307.09288",
+          kind: "paper",
+          note: "A flagship open model that adopts GQA (8 KV heads) in practice — the 'sweet spot' in production."
+        },
+        {
+          label: "kipply — Transformer Inference Arithmetic",
+          url: "https://kipply.github.io/transformer-inference-arithmetic/",
+          kind: "blog",
+          note: "Where the 2 × layers × seq × n_kv × head_dim × bytes formula comes from, with the full memory math."
+        }
+      ]));
 
       /* small scoped styles — colors come from CSS variables only, no hex */
       injectOnce("tq-lvl08-css",

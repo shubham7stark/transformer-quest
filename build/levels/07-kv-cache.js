@@ -53,6 +53,7 @@
           "A CNN sees the whole image at once: one forward pass, done. An ",
           TQ.el("strong", { text: "autoregressive decoder" }),
           " is different — it produces text one token per step, and each new token is fed back in as input for the next step. ",
+          "(", TQ.el("em", { text: "Autoregressive" }), " just means each output token becomes part of the input for the next step.) ",
           "At step ", TQ.math("t"), " the model has the sequence so far (", TQ.math("t"),
           " tokens) and computes a single new token, ", TQ.math("t+1"), "."
         ),
@@ -61,9 +62,61 @@
           ", attention lets that position look at every ", TQ.el("strong", { text: "earlier" }),
           " position — but never a later one (there is none yet). This \"only look left\" rule is ",
           TQ.el("strong", { text: "causal masking" }),
-          ": future positions are masked out (set to −∞ before softmax, so their weight is 0). ",
+          ": future positions are masked out (set to −∞ before softmax — because ", TQ.math("e^(−∞) = 0"),
+          ", that position gets exactly zero weight). ",
           "It's the architectural reason a language model can be trained to predict the next word without cheating by peeking ahead."
         )
+      ));
+
+      // Orienting diagram: the step-and-feedback LOOP at a glance — the one thing
+      // the single-step sandbox below does not make obvious. Static inline SVG,
+      // colors via CSS vars / currentColor only (no hardcoded hex).
+      root.appendChild(TQ.figure(
+        '<svg viewBox="0 0 560 132" width="560" height="132" role="img" ' +
+          'aria-label="Autoregressive generation loop: token t is projected to q,k,v; k,v are appended to the KV cache; the query attends over the cache to produce an output; the next token is sampled and fed back" ' +
+          'font-family="var(--mono)" font-size="11">' +
+          '<defs><marker id="tq-l7-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // stage 1: input token t
+          '<rect x="8" y="40" width="86" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="51" y="61" text-anchor="middle" fill="var(--ink)">token t</text>' +
+          // stage 2: project q,k,v
+          '<rect x="120" y="40" width="96" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="168" y="56" text-anchor="middle" fill="var(--ink)">project</text>' +
+          '<text x="168" y="69" text-anchor="middle" fill="var(--ink-mute)" font-size="10">q_t, k_t, v_t</text>' +
+          // stage 3: KV cache (stack of past columns + 1 new highlighted column)
+          '<text x="294" y="30" text-anchor="middle" fill="var(--ink-mute)" font-size="10">append k_t,v_t → KV-cache</text>' +
+          '<rect x="246" y="40" width="14" height="34" rx="2" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<rect x="262" y="40" width="14" height="34" rx="2" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<rect x="278" y="40" width="14" height="34" rx="2" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<rect x="294" y="40" width="14" height="34" rx="2" fill="var(--accent)" stroke="var(--accent)"/>' +
+          '<text x="301" y="88" text-anchor="middle" fill="var(--accent)" font-size="9">new col</text>' +
+          // stage 4: attend -> out
+          '<rect x="338" y="40" width="96" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="386" y="56" text-anchor="middle" fill="var(--ink)">attend</text>' +
+          '<text x="386" y="69" text-anchor="middle" fill="var(--ink-mute)" font-size="10">q_t over cache → out</text>' +
+          // stage 5: sample next token
+          '<rect x="458" y="40" width="94" height="34" rx="7" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+          '<text x="505" y="56" text-anchor="middle" fill="var(--ink)">sample</text>' +
+          '<text x="505" y="69" text-anchor="middle" fill="var(--ink-mute)" font-size="10">token t+1</text>' +
+          // forward arrows
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="96" y1="57" x2="116" y2="57" marker-end="url(#tq-l7-arrow)"/>' +
+            '<line x1="218" y1="57" x2="242" y2="57" marker-end="url(#tq-l7-arrow)"/>' +
+            '<line x1="310" y1="57" x2="334" y2="57" marker-end="url(#tq-l7-arrow)"/>' +
+            '<line x1="436" y1="57" x2="456" y2="57" marker-end="url(#tq-l7-arrow)"/>' +
+          '</g>' +
+          // curved feedback arrow: token t+1 loops back to the input box
+          '<g stroke="var(--accent)" stroke-width="1.5" fill="none" color="var(--accent)">' +
+            '<path d="M505 76 C505 116, 51 116, 51 78" marker-end="url(#tq-l7-arrow)"/>' +
+          '</g>' +
+          '<text x="280" y="128" text-anchor="middle" fill="var(--accent)" font-size="10">feed back / next step</text>' +
+          // note: only k,v are stored
+          '<text x="294" y="18" text-anchor="middle" fill="var(--ink-faint)" font-size="10">only k,v are stored — q_t is discarded after this step</text>' +
+        '</svg>',
+        "Autoregressive generation is a loop: project the new token to q,k,v; append only k,v to the KV-cache; " +
+        "let the query attend over the whole cache; sample the next token and feed it back. The sandbox below shows ONE turn of this loop."
       ));
 
       root.appendChild(TQ.block(
@@ -71,7 +124,8 @@
         TQ.p(
           "Recall self-attention: each token projects its embedding into a query ", TQ.math("q"),
           ", a key ", TQ.math("k"), ", and a value ", TQ.math("v"),
-          " (", TQ.math("Q=XWq, K=XWk, V=XWv"), "). To produce the next token at step ", TQ.math("t"),
+          " (", TQ.math("Q=XWq, K=XWk, V=XWv"),
+          " — i.e. multiply each embedding by a learned matrix, recap from L3). To produce the next token at step ", TQ.math("t"),
           ", you only need the NEW token's query ", TQ.math("q_t"),
           ". That ", TQ.math("q_t"), " dot-products against the keys of ALL tokens, softmaxes, and reads out a weighted sum of their values."
         ),
@@ -332,6 +386,75 @@
       redraw();
       root.appendChild(sandbox);
 
+      /* ---------------------------------- the loop above, as real PyTorch code */
+      root.appendChild(TQ.block(
+        TQ.h(2, "The same loop, in code"),
+        TQ.p(
+          "Here is the sandbox as raw PyTorch — framework-light matmuls so the cache mechanics aren't hidden. ",
+          "Each ", TQ.el("strong", { text: "Generate next token" }), " click runs one iteration of ", TQ.math("generate_with_cache"),
+          ": the new column appended to ", TQ.math("K_cache"), "/", TQ.math("V_cache"),
+          " is exactly the new heatmap column you watched grow above. The ", TQ.math("naive_no_cache"),
+          " contrast reprojects K and V for the WHOLE prefix every step — the wasted ", TQ.math("~T²/2"), " vs ", TQ.math("~T"), " work, made visible."
+        ),
+        TQ.code(
+          "import torch\n" +
+          "import torch.nn.functional as F\n" +
+          "\n" +
+          "# learned projections (recap from L3); dk = head_dim\n" +
+          "d_model, dk = 16, 4\n" +
+          "Wq = torch.randn(d_model, dk)\n" +
+          "Wk = torch.randn(d_model, dk)\n" +
+          "Wv = torch.randn(d_model, dk)\n" +
+          "\n" +
+          "def step(x_t, K_cache, V_cache):\n" +
+          "    # 1. project ONLY the new token  x_t: (d_model,)\n" +
+          "    q_t = x_t @ Wq                       # (dk,)\n" +
+          "    k_t = x_t @ Wk                       # (dk,)\n" +
+          "    v_t = x_t @ Wv                       # (dk,)\n" +
+          "\n" +
+          "    # 2. append k_t, v_t as a new row/column of the cache\n" +
+          "    K_cache = torch.cat([K_cache, k_t[None, :]], dim=0)  # (t, dk)\n" +
+          "    V_cache = torch.cat([V_cache, v_t[None, :]], dim=0)  # (t, dk)\n" +
+          "\n" +
+          "    # 3. the single new query attends over the WHOLE cache\n" +
+          "    scores = q_t @ K_cache.T / (dk ** 0.5)              # (t,)\n" +
+          "    weights = F.softmax(scores, dim=-1)                 # (t,) causal for free\n" +
+          "    out = weights @ V_cache                             # (dk,)\n" +
+          "    return out, K_cache, V_cache\n" +
+          "\n" +
+          "def generate_with_cache(embeds, n_new):\n" +
+          "    # embeds: (prompt_len, d_model). Cache grows one column per step.\n" +
+          "    K_cache = embeds @ Wk                 # prefill: (prompt_len, dk)\n" +
+          "    V_cache = embeds @ Wv                 # the whole prompt is now cached\n" +
+          "    # the last prompt position already gave us its q; sample the FIRST new\n" +
+          "    # token from it (its k,v are already in the cache -- don't re-append).\n" +
+          "    q_last = embeds[-1] @ Wq                            # (dk,)\n" +
+          "    scores = q_last @ K_cache.T / (dk ** 0.5)          # (prompt_len,)\n" +
+          "    out = F.softmax(scores, dim=-1) @ V_cache          # (dk,)\n" +
+          "    x_t = next_embed(out)                 # first generated token\n" +
+          "    for _ in range(n_new):\n" +
+          "        # x_t is a genuinely NEW token: project it once, append, attend.\n" +
+          "        out, K_cache, V_cache = step(x_t, K_cache, V_cache)\n" +
+          "        x_t = next_embed(out)             # sample/argmax -> feed back\n" +
+          "    return K_cache                        # 1 (k,v) projection per step -> ~T total\n" +
+          "\n" +
+          "def naive_no_cache(embeds, n_new):\n" +
+          "    # WITHOUT a cache: every step recomputes K, V for the ENTIRE prefix.\n" +
+          "    X = embeds\n" +
+          "    for _ in range(n_new):\n" +
+          "        K = X @ Wk                        # (t, dk) re-derived from scratch\n" +
+          "        V = X @ Wv                        # (t, dk) re-derived from scratch\n" +
+          "        q_t = (X[-1] @ Wq)                # only the last query is used\n" +
+          "        weights = F.softmax(q_t @ K.T / (dk ** 0.5), dim=-1)\n" +
+          "        out = weights @ V\n" +
+          "        X = torch.cat([X, next_embed(out)[None, :]], dim=0)\n" +
+          "    # K,V recomputed for 1+2+...+T tokens -> ~T**2/2 projections of pure waste\n",
+          { lang: "python", label: "KV-cache generation loop",
+            caption: "Each Generate-next-token click = one call to step(): the appended row of K_cache/V_cache is the new heatmap column above. " +
+                     "naive_no_cache reprojects the whole prefix every step — the quadratic waste the cache removes." }
+        )
+      ));
+
       /* ----------------------------------------- causal mask grid (the rule) */
       var maskBlock = TQ.block(
         TQ.h(2, "Why \"only look left\" comes for free"),
@@ -367,7 +490,8 @@
         TQ.p(
           "Caching trades recompute for storage, and the storage grows with everything: ",
           TQ.math("cache_bytes = 2 · n_layers · seq_len · n_kv_heads · head_dim · bytes"),
-          " (the 2 is K and V). It scales linearly with sequence length, so a 100k-token context is a genuinely large, " +
+          " (the 2 is K and V; don't worry about ", TQ.math("n_kv_heads"),
+          " yet — that term is exactly what the next level unpacks). It scales linearly with sequence length, so a 100k-token context is a genuinely large, " +
           "ever-growing tensor in GPU memory — often dwarfing the model weights for long contexts. ",
           "That's the real bottleneck of LLM serving: not FLOPs, but KV-cache memory."
         )
@@ -424,6 +548,40 @@
       memBlock.appendChild(memOut);
       updateMem();
       root.appendChild(memBlock);
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — generation & the KV cache", [
+        {
+          label: "kipply — Transformer Inference Arithmetic",
+          url: "https://kipply.github.io/transformer-inference-arithmetic/",
+          kind: "blog",
+          note: "Works out the actual KV-cache byte budget and why memory, not FLOPs, bounds long-context serving."
+        },
+        {
+          label: "Andrej Karpathy — Let's build GPT from scratch",
+          url: "https://www.youtube.com/watch?v=kCc8FmEb1nY",
+          kind: "video",
+          note: "Builds a decoder end to end, including the causal mask and autoregressive generation loop."
+        },
+        {
+          label: "Andrej Karpathy — nanoGPT",
+          url: "https://github.com/karpathy/nanoGPT",
+          kind: "code",
+          note: "A clean, readable GPT with a real generate() loop — see the cache and sampling in production-style code."
+        },
+        {
+          label: "The Annotated Transformer",
+          url: "https://nlp.seas.harvard.edu/annotated-transformer/",
+          kind: "code",
+          note: "Line-by-line transformer with the attention + masking math you just clicked through."
+        },
+        {
+          label: "The Illustrated Transformer",
+          url: "https://jalammar.github.io/illustrated-transformer/",
+          kind: "blog",
+          note: "Jay Alammar's visual walkthrough of Q/K/V attention — the projections this cache stores."
+        }
+      ]));
 
       /* ---------------------------------------------------- wrap-up takeaway */
       root.appendChild(TQ.block(

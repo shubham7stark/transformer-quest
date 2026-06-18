@@ -112,6 +112,60 @@
         TQ.callout(
           "CNN bridge: residual = skip connection (ResNet, 2015). The block learns x + (a small correction), " +
           "not x replaced. That's why gradients reach the bottom of a very deep stack."
+        ),
+        // Static topology skeleton: the WIRING a beginner should see before the
+        // 7-stage stepper walks values through linearly. Colors via CSS vars /
+        // currentColor only (no hardcoded hex); arrowhead marker like L1's.
+        TQ.figure(
+          '<svg viewBox="0 0 300 320" width="300" height="320" role="img" ' +
+            'aria-label="Transformer block topology: input branches into a residual skip and a sub-layer, ' +
+            'merging at Add and Norm, twice" ' +
+            'font-family="var(--mono)" font-size="11">' +
+            '<defs><marker id="tq-l6-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+              'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+              '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+            '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--line)">' +
+              // backbone bottom -> up
+              '<line x1="150" y1="300" x2="150" y2="262"/>' +
+              '<line x1="150" y1="214" x2="150" y2="176" marker-end="url(#tq-l6-arrow)"/>' +
+              '<line x1="150" y1="152" x2="150" y2="118"/>' +
+              '<line x1="150" y1="70" x2="150" y2="34" marker-end="url(#tq-l6-arrow)"/>' +
+            '</g>' +
+            // residual bypass arcs (skip connections) drawn in accent
+            '<g stroke="var(--accent-2)" stroke-width="1.5" fill="none">' +
+              '<path d="M150 262 C 250 250, 250 200, 188 188" marker-end="url(#tq-l6-arrow)" color="var(--accent-2)"/>' +
+              '<path d="M150 118 C 250 106, 250 56, 188 44" marker-end="url(#tq-l6-arrow)" color="var(--accent-2)"/>' +
+            '</g>' +
+            // input x
+            '<text x="150" y="316" text-anchor="middle" fill="var(--ink)">x</text>' +
+            // MHA sub-layer box
+            '<rect x="62" y="238" width="120" height="26" rx="6" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="122" y="255" text-anchor="middle" fill="var(--ink)">MHA</text>' +
+            // branch line into MHA
+            '<line x1="150" y1="276" x2="122" y2="264" stroke="currentColor" stroke-width="1.5" ' +
+              'color="var(--line)"/>' +
+            // Add & Norm #1
+            '<rect x="92" y="176" width="116" height="26" rx="6" fill="var(--panel-hi)" stroke="var(--accent-2)"/>' +
+            '<text x="150" y="193" text-anchor="middle" fill="var(--ink)">Add &amp; Norm</text>' +
+            // z label
+            '<text x="166" y="140" text-anchor="start" fill="var(--ink-mute)">z</text>' +
+            // FFN sub-layer box
+            '<rect x="62" y="94" width="120" height="26" rx="6" fill="var(--panel-hi)" stroke="var(--line)"/>' +
+            '<text x="122" y="111" text-anchor="middle" fill="var(--ink)">FFN</text>' +
+            '<line x1="150" y1="132" x2="122" y2="120" stroke="currentColor" stroke-width="1.5" ' +
+              'color="var(--line)"/>' +
+            // Add & Norm #2
+            '<rect x="92" y="32" width="116" height="26" rx="6" fill="var(--panel-hi)" stroke="var(--accent-2)"/>' +
+            '<text x="150" y="49" text-anchor="middle" fill="var(--ink)">Add &amp; Norm</text>' +
+            // out label
+            '<text x="150" y="20" text-anchor="middle" fill="var(--good)">out: same shape as x</text>' +
+            // skip labels
+            '<text x="262" y="228" text-anchor="middle" fill="var(--accent-2)" font-size="10">residual</text>' +
+            '<text x="262" y="240" text-anchor="middle" fill="var(--accent-2)" font-size="10">(skip)</text>' +
+            '<text x="262" y="84" text-anchor="middle" fill="var(--accent-2)" font-size="10">residual</text>' +
+            '<text x="262" y="96" text-anchor="middle" fill="var(--accent-2)" font-size="10">(skip)</text>' +
+          '</svg>',
+          "Two sub-layers, each wrapped in a residual + LayerNorm. The skip arrows are why a 100-layer stack still trains."
         )
       ));
 
@@ -134,7 +188,7 @@
         TQ.p(
           "So for a single ", TQ.math("d_model = " + d), " vector, LayerNorm forces those ", String(d),
           " numbers to have ", TQ.el("strong", { text: "mean 0 and variance 1" }),
-          " (then applies learned gain γ and bias β, here 1 and 0). The residual sum ",
+          " (then applies a learned scale (gamma, γ) and shift (bias β), here 1 and 0). The residual sum ",
           TQ.math("x + sublayer(x)"), " can blow up the scale; LayerNorm immediately tames it back. ",
           "In the walkthrough below you'll watch the mean and variance go from messy to exactly 0 and 1 — ",
           TQ.el("strong", { text: "computed, not asserted" }), "."
@@ -150,12 +204,11 @@
         ),
         TQ.p(
           "Two things make it transformer-flavored. First, it's ", TQ.el("strong", { text: "position-wise" }),
-          ": the SAME W1, W2 are applied at every position, like a 1×1 convolution sliding over the sequence " +
-          "(shared weights, applied independently per location). Attention is the only place tokens talk; the " +
-          "FFN is purely local per-token computation. Second, it ",
+          ": the SAME W1, W2 are applied at every position — the same little network re-run at each token, " +
+          "like a 1×1 convolution sliding over the sequence (shared weights, applied independently per location). " +
+          "Attention is the only place tokens talk; the FFN is purely local per-token computation. Second, it ",
           TQ.el("strong", { text: "expands then contracts" }),
-          " — the hidden layer is typically ~4× d_model (GPT-2/GPT-3 are exactly 4×; Llama-2-7B is " +
-          "4096→11008, ~2.7×, because its SwiGLU trims the hidden size to pay for an extra gate matrix), " +
+          " — the hidden layer is typically ~4× d_model (GPT-2/GPT-3 are exactly 4×), " +
           "so despite being 'just an MLP' it holds roughly two-thirds of a transformer's parameters. Attention ",
           TQ.el("strong", { text: "routes" }), " information; the FFN is where the model ",
           TQ.el("strong", { text: "stores and transforms" }), " what it knows."
@@ -163,6 +216,48 @@
         TQ.note(
           "Modern models often swap ReLU for GELU/SwiGLU and put LayerNorm BEFORE each sub-layer " +
           "('pre-LN') for steadier gradients. We use the original post-LN here so the ordering is concrete."
+        ),
+        TQ.note(
+          "Aside (expert): Llama-2-7B's FFN is 4096→11008, only ~2.7× rather than the usual 4×, because its " +
+          "SwiGLU variant trims the hidden size to pay for an extra gate matrix. Same expand-then-contract idea."
+        ),
+        // Consolidate MHA + Add&Norm + FFN into ONE runnable forward before the
+        // reader enters the 7-stage stepper. Pre-norm (ln BEFORE each sub-layer)
+        // to match the pre-LN aside above; the live walkthrough animates post-LN.
+        TQ.code(
+          "import torch\n" +
+          "import torch.nn as nn\n" +
+          "\n" +
+          "class TransformerBlock(nn.Module):\n" +
+          "    def __init__(self, d_model, n_heads):\n" +
+          "        super().__init__()\n" +
+          "        self.ln1 = nn.LayerNorm(d_model)\n" +
+          "        self.ln2 = nn.LayerNorm(d_model)\n" +
+          "        self.attn = nn.MultiheadAttention(d_model, n_heads, batch_first=True)\n" +
+          "        self.ffn = nn.Sequential(\n" +
+          "            nn.Linear(d_model, 4 * d_model),  # expand\n" +
+          "            nn.GELU(),\n" +
+          "            nn.Linear(4 * d_model, d_model),  # contract\n" +
+          "        )\n" +
+          "\n" +
+          "    def forward(self, x, attn_mask=None):\n" +
+          "        # pre-norm: LayerNorm BEFORE each sub-layer, residual add AFTER\n" +
+          "        h = self.ln1(x)\n" +
+          "        a, _ = self.attn(h, h, h, attn_mask=attn_mask)  # self-attn: q=k=v=h\n" +
+          "        x = x + a                                       # residual #1\n" +
+          "        x = x + self.ffn(self.ln2(x))                   # residual #2\n" +
+          "        return x                                        # same shape as input\n" +
+          "\n" +
+          "# encoder block -> no mask (every token sees every token):\n" +
+          "#   out = block(x)\n" +
+          "# decoder block -> causal mask (each token sees only itself + earlier):\n" +
+          "#   mask = nn.Transformer.generate_square_subsequent_mask(x.size(1))\n" +
+          "#   out = block(x, attn_mask=mask)\n",
+          { lang: "python", label: "one transformer block (pre-norm)",
+            caption: "Pre-LN: x = x + attn(ln1(x)); x = x + ffn(ln2(x)). The FFN expands 4x then contracts " +
+              "(real models use ~4x; the live viz uses 2x for legible cells). The encoder/decoder contrast is " +
+              "just the attn_mask. Note: this is pre-LN — the live walkthrough animates the original post-LN " +
+              "(LayerNorm AFTER each sub-layer), so the two differ only in where the norm sits." }
         )
       ));
 
@@ -293,9 +388,10 @@
               }));
               c.appendChild(vv(data.a, "MHA(x)"));
               c.appendChild(TQ.note(
-                "For legibility this block runs a single full-width head (dk = d_model, Wo = identity); the " +
-                "Concat-then-Wo machinery from Level 4 (dk = d_model / H, then a learned output projection) would " +
-                "slot in here unchanged and produce the same d_model-wide output."
+                "For legibility this block runs a single full-width head (dk = d_model, Wo = identity) — " +
+                "i.e. one head spanning all " + d + " dims just to keep the picture simple; real models split into " +
+                "several. The Concat-then-Wo machinery from Level 4 (dk = d_model / H heads, then a learned output " +
+                "projection) would slot in here unchanged and produce the same d_model-wide output."
               ));
               c.appendChild(TQ.note(
                 "Every later stage is per-token: it never looks at the other five tokens again."
@@ -319,7 +415,7 @@
             run: function (c) {
               c.appendChild(TQ.p(
                 "Normalize across the token's own ", String(d),
-                " features: subtract the mean, divide by the std, apply γ=1, β=0. Watch the stats ",
+                " features: subtract the mean, divide by the std, apply the learned scale γ=1 and shift β=0. Watch the stats ",
                 TQ.el("strong", { text: "snap" }), " to mean 0, var 1 — computed from the numbers, not asserted."
               ));
               c.appendChild(TQ.el("div", { class: "tq-tb-residual" },
@@ -758,6 +854,27 @@
           "blocks. That's why the rest of this game lives in the decoder world — when Level 7 says a 'decoder generates " +
           "left-to-right,' this masked block is exactly what it means."
         )
+      ));
+
+      /* ------------------------------------------------ go deeper (external) */
+      root.appendChild(TQ.block(
+        TQ.resources("Go deeper", [
+          { label: "The Illustrated Transformer", kind: "blog",
+            url: "https://jalammar.github.io/illustrated-transformer/",
+            note: "the visual capstone — full encoder-decoder block, step by step" },
+          { label: "Attention Is All You Need", kind: "paper",
+            url: "https://arxiv.org/abs/1706.03762",
+            note: "the original encoder-decoder + post-LN block this level walks through" },
+          { label: "On Layer Normalization in the Transformer (Pre-LN vs Post-LN)", kind: "paper",
+            url: "https://arxiv.org/abs/2002.04745",
+            note: "why modern models move LayerNorm before each sub-layer" },
+          { label: "BERT (encoder-only)", kind: "paper",
+            url: "https://arxiv.org/abs/1810.04805",
+            note: "bidirectional self-attention, no mask" },
+          { label: "T5 (encoder-decoder)", kind: "paper",
+            url: "https://arxiv.org/abs/1910.10683",
+            note: "the cross-attention architecture from the grid above" }
+        ])
       ));
 
       /* scoped styles — colors via CSS variables only, no hardcoded hex */

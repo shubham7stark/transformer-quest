@@ -90,6 +90,74 @@
         vecList.appendChild(TQ.vectorView(emb[vi], { label: tokens[vi], cellSize: 24 }));
       }
       vectorBlock.appendChild(vecList);
+
+      // Orienting diagram: text -> token ids -> vectors. Static SVG, inherits
+      // theme colors via currentColor / CSS vars (no hardcoded hex).
+      vectorBlock.appendChild(TQ.figure(
+        '<svg viewBox="0 0 560 120" width="560" height="120" role="img" ' +
+          'aria-label="Flow from text to token ids to embedding vectors" ' +
+          'font-family="var(--mono)" font-size="13">' +
+          '<defs><marker id="tq-l1-arrow" viewBox="0 0 10 10" refX="9" refY="5" ' +
+            'markerWidth="7" markerHeight="7" orient="auto-start-reverse">' +
+            '<path d="M0 0 L10 5 L0 10 z" fill="currentColor"/></marker></defs>' +
+          // stage 1: text
+          '<text x="70" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">text</text>' +
+          '<rect x="14" y="34" width="112" height="34" rx="7" fill="var(--panel-hi)" ' +
+            'stroke="var(--line)"/>' +
+          '<text x="70" y="56" text-anchor="middle" fill="var(--ink)">"The cat"</text>' +
+          // stage 2: token ids
+          '<text x="280" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">token ids</text>' +
+          '<rect x="224" y="34" width="112" height="34" rx="7" fill="var(--panel-hi)" ' +
+            'stroke="var(--line)"/>' +
+          '<text x="280" y="56" text-anchor="middle" fill="var(--accent-2)">[464, 3797]</text>' +
+          // stage 3: vectors
+          '<text x="490" y="22" text-anchor="middle" fill="var(--ink-mute)" font-size="11">embeddings</text>' +
+          '<g>' +
+            '<rect x="434" y="34" width="14" height="14" rx="2" fill="var(--cool)"/>' +
+            '<rect x="450" y="34" width="14" height="14" rx="2" fill="var(--info)"/>' +
+            '<rect x="466" y="34" width="14" height="14" rx="2" fill="var(--accent)"/>' +
+            '<rect x="482" y="34" width="14" height="14" rx="2" fill="var(--good)"/>' +
+            '<rect x="498" y="34" width="14" height="14" rx="2" fill="var(--cool-deep)"/>' +
+            '<rect x="514" y="34" width="14" height="14" rx="2" fill="var(--accent-2)"/>' +
+            '<rect x="434" y="52" width="14" height="14" rx="2" fill="var(--accent)"/>' +
+            '<rect x="450" y="52" width="14" height="14" rx="2" fill="var(--good)"/>' +
+            '<rect x="466" y="52" width="14" height="14" rx="2" fill="var(--cool)"/>' +
+            '<rect x="482" y="52" width="14" height="14" rx="2" fill="var(--accent-2)"/>' +
+            '<rect x="498" y="52" width="14" height="14" rx="2" fill="var(--info)"/>' +
+            '<rect x="514" y="52" width="14" height="14" rx="2" fill="var(--cool-deep)"/>' +
+          '</g>' +
+          // arrows + labels
+          '<g stroke="currentColor" stroke-width="1.5" fill="none" color="var(--ink-faint)">' +
+            '<line x1="130" y1="51" x2="218" y2="51" marker-end="url(#tq-l1-arrow)"/>' +
+            '<line x1="340" y1="51" x2="428" y2="51" marker-end="url(#tq-l1-arrow)"/>' +
+          '</g>' +
+          '<text x="174" y="44" text-anchor="middle" fill="var(--ink-faint)" font-size="10">tokenize</text>' +
+          '<text x="384" y="44" text-anchor="middle" fill="var(--ink-faint)" font-size="10">lookup</text>' +
+        '</svg>',
+        "The input pipeline: text is split into tokens, each token maps to an integer id, " +
+        "and each id indexes one row of the embedding table to produce its vector."
+      ));
+
+      // Minimal, correct PyTorch: tokenize -> nn.Embedding lookup -> the token
+      // vectors this level visualizes. Mirrors the toy (vocab→ids→rows of a table).
+      vectorBlock.appendChild(TQ.code(
+        "import torch\n" +
+        "import torch.nn as nn\n" +
+        "\n" +
+        "# 1. tokenize: text -> integer ids (one row per vocabulary entry)\n" +
+        "token_ids = torch.tensor([464, 3797, 3332, 319, 262, 2603])  # The cat sat on the mat\n" +
+        "\n" +
+        "# 2. the embedding table: a trainable (vocab_size x d_model) matrix\n" +
+        "vocab_size, d_model = 50257, 16\n" +
+        "embedding = nn.Embedding(vocab_size, d_model)\n" +
+        "\n" +
+        "# 3. lookup: each id selects its row -> (seq_len x d_model) vectors\n" +
+        "vectors = embedding(token_ids)   # shape: (6, 16) — exactly what's drawn above\n" +
+        "print(vectors.shape)             # torch.Size([6, 16])\n",
+        { lang: "python", label: "embedding lookup",
+          caption: "nn.Embedding is just a lookup table: id i returns row i. Those rows are the colored vectors above." }
+      ));
+
       vectorBlock.appendChild(TQ.callout(
         "Notice \"The\" (#0) and \"the\" (#4) look almost identical — same word, near-identical vectors. " +
         "\"cat\" and \"mat\" share a family resemblance too. That visual similarity is the whole point: " +
@@ -266,6 +334,34 @@
       ));
       updatePick();
       root.appendChild(pickBlock);
+
+      /* ----------------------------------------------- go deeper (resources) */
+      root.appendChild(TQ.resources("Go deeper — tokens & embeddings", [
+        {
+          label: "The Illustrated Word2Vec",
+          url: "https://jalammar.github.io/illustrated-word2vec/",
+          kind: "blog",
+          note: "Jay Alammar's visual tour of how word vectors capture meaning — the geometry you just clicked through."
+        },
+        {
+          label: "Tiktokenizer — see tokenization live",
+          url: "https://tiktokenizer.vercel.app/",
+          kind: "interactive",
+          note: "Type any text and watch a real BPE tokenizer split it into token ids in your browser."
+        },
+        {
+          label: "Hugging Face — Summary of the tokenizers",
+          url: "https://huggingface.co/docs/transformers/en/tokenizer_summary",
+          kind: "doc",
+          note: "How real tokenizers (BPE, WordPiece, Unigram) actually carve text into sub-word pieces."
+        },
+        {
+          label: "Karpathy — Let's build the GPT Tokenizer",
+          url: "https://www.youtube.com/watch?v=zduSFxRajkE",
+          kind: "video",
+          note: "Builds a tokenizer from scratch, end to end — the step that produces the ids feeding nn.Embedding."
+        }
+      ]));
 
       /* --------------------------------------------------- wrap-up takeaway */
       root.appendChild(TQ.block(
